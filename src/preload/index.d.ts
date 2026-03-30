@@ -29,6 +29,26 @@ export interface AvatarBatchPublisherDesktopBridge {
   readFileAsDataUrl: (absolutePath: string) => Promise<string>;
 }
 
+export type AvatarBatchPublisherRuntimeMode = "browser" | "desktop-dev" | "desktop-release";
+export type AvatarBatchPublisherBackendLifecycleState = "starting" | "ready" | "degraded" | "stopped";
+
+export interface AvatarBatchPublisherBackendLifecycleEvent {
+  state: AvatarBatchPublisherBackendLifecycleState;
+  message: string;
+  baseUrl: string | null;
+  logDirectoryPath: string | null;
+}
+
+export interface AvatarBatchPublisherRuntimeBridge {
+  mode: AvatarBatchPublisherRuntimeMode;
+  backendBaseUrl?: string | null;
+  logDirectoryPath?: string | null;
+  onBackendLifecycle?: (
+    listener: (event: AvatarBatchPublisherBackendLifecycleEvent) => void
+  ) => (() => void) | void;
+  revealLogDirectory?: () => Promise<void>;
+}
+
 export interface AvatarBatchPublisherRuntimeInfo {
   platform: NodeJS.Platform;
   versions: {
@@ -36,6 +56,7 @@ export interface AvatarBatchPublisherRuntimeInfo {
     chrome: string;
     node: string;
   };
+  runtime?: AvatarBatchPublisherRuntimeBridge;
   desktop?: AvatarBatchPublisherDesktopBridge;
 }
 

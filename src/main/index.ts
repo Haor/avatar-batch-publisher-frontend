@@ -107,6 +107,10 @@ function registerDesktopHandlers(): void {
     }
   });
 
+  ipcMain.handle("runtime:reveal-log-directory", async () => {
+    shell.showItemInFolder(app.getPath("logs"));
+  });
+
   ipcMain.handle(
     "desktop:copy-file-to-directory",
     async (_event, request: CopyFileToDirectoryRequest) => {
@@ -127,6 +131,8 @@ function registerDesktopHandlers(): void {
 }
 
 function createWindow(): void {
+  const backendBaseUrl = process.env.VITE_BACKEND_BASE_URL?.trim() || "http://127.0.0.1:38124/api/v1";
+  const logDirectoryPath = app.getPath("logs");
   const window = new BrowserWindow({
     width: 1460,
     height: 960,
@@ -139,7 +145,12 @@ function createWindow(): void {
     webPreferences: {
       preload: join(__dirname, "../preload/index.mjs"),
       contextIsolation: true,
-      sandbox: false
+      sandbox: false,
+      additionalArguments: [
+        "--abp-runtime-mode=desktop-dev",
+        `--abp-backend-base-url=${backendBaseUrl}`,
+        `--abp-log-dir=${logDirectoryPath}`
+      ]
     }
   });
 

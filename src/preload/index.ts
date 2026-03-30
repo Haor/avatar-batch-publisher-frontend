@@ -1,11 +1,43 @@
 import { contextBridge, ipcRenderer } from "electron";
 
+type RuntimeMode = "browser" | "desktop-dev" | "desktop-release";
+type BackendLifecycleState = "starting" | "ready" | "degraded" | "stopped";
+
+type BackendLifecycleEvent = {
+  state: BackendLifecycleState;
+  message: string;
+  baseUrl: string | null;
+  logDirectoryPath: string | null;
+};
+
+function readRuntimeArg(prefix: string): string | null {
+  const entry = process.argv.find((value) => value.startsWith(prefix));
+  return entry ? entry.slice(prefix.length) : null;
+}
+
+const runtimeMode = (readRuntimeArg("--abp-runtime-mode=") ?? "browser") as RuntimeMode;
+const backendBaseUrl = readRuntimeArg("--abp-backend-base-url=");
+const logDirectoryPath = readRuntimeArg("--abp-log-dir=");
+
 const runtimeInfo = {
   platform: process.platform,
   versions: {
     electron: process.versions.electron,
     chrome: process.versions.chrome,
     node: process.versions.node
+  },
+  runtime: {
+    mode: runtimeMode,
+    backendBaseUrl,
+    logDirectoryPath,
+    onBackendLifecycle: (listener: (event: BackendLifecycleEvent) => void) => {
+      const wrapped = (_event: unknown, payload: BackendLifecycleEvent) => listener(payload);
+      ipcRenderer.on("runtime:backend-lifecycle", wrapped);
+      return () => {
+        ipcRenderer.removeListener("runtime:backend-lifecycle", wrapped);
+      };
+    },
+    revealLogDirectory: () => ipcRenderer.invoke("runtime:reveal-log-directory") as Promise<void>
   },
   desktop: {
     pickFiles: (options?: {

@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { LayoutGroup } from "motion/react";
 import { ApiProvider } from "./ApiContext";
-import { ConnectionProvider } from "./ConnectionContext";
+import { ConnectionProvider, useConnection } from "./ConnectionContext";
 import { AccountsProvider } from "./AccountsContext";
 import { ActivePublishProvider } from "./ActivePublishContext";
 import { NavigationProvider, useNavigation } from "./NavigationContext";
@@ -16,6 +16,9 @@ import { PublishPage } from "../features/publish/PublishPage";
 import { HistoryPage } from "../features/history/HistoryPage";
 import { AccountsPage } from "../features/accounts/AccountsPage";
 import { SettingsPage } from "../features/settings/SettingsPage";
+import { RuntimeServiceBanner } from "../shared/components/RuntimeServiceBanner";
+import { RuntimeBootstrapScreenInner } from "../shared/components/RuntimeBootstrapScreen";
+import { useApi } from "./ApiContext";
 
 const pageEntries: { key: PageKey; component: React.ComponentType }[] = [
   { key: "home", component: HomePage },
@@ -96,6 +99,7 @@ function AppShell() {
 
   return (
     <NavigationProvider activePage={activePage} setActivePage={setActivePage}>
+      <RuntimeServiceBanner />
       <AppChrome searchOpen={searchOpen} onOpenSearch={openSearch} onCloseSearch={closeSearch} />
     </NavigationProvider>
   );
@@ -105,16 +109,91 @@ export function App() {
   return (
     <ApiProvider>
       <ConnectionProvider>
-        <AccountsProvider>
-          <ActivePublishProvider>
-            <ToastProvider>
-              <AppShell />
-            </ToastProvider>
-          </ActivePublishProvider>
-        </AccountsProvider>
+        <RuntimeBootstrapGate>
+          <AccountsProvider>
+            <ActivePublishProvider>
+              <ToastProvider>
+                <AppShell />
+              </ToastProvider>
+            </ActivePublishProvider>
+          </AccountsProvider>
+        </RuntimeBootstrapGate>
       </ConnectionProvider>
     </ApiProvider>
   );
 }
 
 export default App;
+
+function RuntimeBootstrapGate({ children }: { children: React.ReactNode }) {
+  const { runtimeMode, serviceState } = useConnection();
+  const api = useApi();
+  const [bootstrapComplete, setBootstrapComplete] = useState(runtimeMode !== "desktop-release");
+  const [bootstrapMessage, setBootstrapMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (runtimeMode !== "desktop-release") {
+      setBootstrapComplete(true);
+      return;
+    }
+
+    if (serviceState !== "ready") {
+      setBootstrapComplete(false);
+      setBootstrapMessage(null);
+      return;
+    }
+
+    let cancelled = false;
+
+    async function bootstrapSessions() {
+      setBootstrapComplete(false);
+      setBootstrapMessage("正在校验账号会话...");
+
+      try {
+        const response = await api.accounts.list();
+        const refreshTargets = response.items.filter((account) => account.hasStoredCredential);
+
+        for (let index = 0; index < refreshTargets.length; index += 1) {
+          if (cancelled) {
+            return;
+          }
+
+          const account = refreshTargets[index];
+          setBootstrapMessage(
+            refreshTargets.length > 1
+              ? `正在校验账号会话（${index + 1}/${refreshTargets.length}）：${account.displayName}`
+              : `正在校验账号会话：${account.displayName}`
+          );
+
+          try {
+            await api.accounts.refresh(account.accountId);
+          } catch {
+            // 这里故意吞掉，后续页面会读取刷新后的账号状态并决定是否要求重登。
+          }
+        }
+      } finally {
+        if (!cancelled) {
+          setBootstrapComplete(true);
+          setBootstrapMessage(null);
+        }
+      }
+    }
+
+    void bootstrapSessions();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [api, runtimeMode, serviceState]);
+
+  if (runtimeMode === "desktop-release" && (serviceState !== "ready" || !bootstrapComplete)) {
+    return (
+      <RuntimeBootstrapScreenInner
+        messageOverride={serviceState === "ready" ? bootstrapMessage : null}
+        progressCopyOverride={serviceState === "ready" ? "正在同步本地会话状态..." : null}
+      />
+    );
+  }
+
+  return <>{children}</>;
+}

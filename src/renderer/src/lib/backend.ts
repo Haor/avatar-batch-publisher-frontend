@@ -51,12 +51,17 @@ import type { NetworkSettings, UpdateNetworkSettingsRequest, StorageSettings } f
 import type { CollectionResponse, PagedCollectionResponse, OperationStatusResponse } from "../contracts/shared";
 import { requestJson } from "./http";
 import { buildQueryString } from "./query-string";
+import { getRuntimeBackendBaseUrl } from "./runtime";
 import { createEventStream, type SseHandlers } from "./sse";
 
 const DEFAULT_BACKEND_BASE_URL = "http://127.0.0.1:38124/api/v1";
 
 export function resolveBackendBaseUrl(): string {
-  return import.meta.env.VITE_BACKEND_BASE_URL?.trim() || DEFAULT_BACKEND_BASE_URL;
+  return (
+    getRuntimeBackendBaseUrl() ||
+    import.meta.env.VITE_BACKEND_BASE_URL?.trim() ||
+    DEFAULT_BACKEND_BASE_URL
+  );
 }
 
 export function createBackendApi(baseUrl: string) {

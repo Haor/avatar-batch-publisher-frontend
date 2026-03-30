@@ -1,5 +1,6 @@
 import { motion } from "motion/react";
 import { Home, Layers, Send, History, Users, Settings, Plus } from "lucide-react";
+import brandIconUrl from "../../../../resources/icon1.svg";
 import { spring } from "../shared/springs";
 import { StatusDot } from "../shared/components/StatusDot";
 import { ConnectionStatus } from "../shared/components/ConnectionStatus";
@@ -40,45 +41,6 @@ function NavButton({ item, active, onNavigate }: {
       <Icon size={17} strokeWidth={1.75} />
       <span>{item.label}</span>
     </button>
-  );
-}
-
-function Logo() {
-  return (
-    <svg
-      className="sidebar-logo"
-      viewBox="0 0 82 28"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      aria-label="ABP"
-    >
-      {/* A — 高对比衬线体：粗左腿 + 细右腿 + 细横杠 */}
-      <path
-        fillRule="evenodd"
-        d="M10.5 2 L0 24 L3.8 24 L6.2 18.2 L15.2 18.2 L18.2 24 L20 24 L10.5 2Z M7 16.5 L10.5 6 L14.4 16.5Z"
-        fill="var(--fg)"
-      />
-      {/* B — 粗竖干 + 优雅双弧 */}
-      <path
-        fillRule="evenodd"
-        d="M26 2 L26 24 L34.5 24 C38.5 24 41 21.5 41 18.2 C41 15.5 39.2 13.5 36.2 12.8 C38.5 12 40 10.2 40 7.8 C40 4.5 37.5 2 33.5 2Z M29.2 4.8 L33 4.8 C35.8 4.8 37.5 6 37.5 8 C37.5 10 35.8 11.2 33 11.2 L29.2 11.2Z M29.2 13.5 L34 13.5 C37 13.5 38.5 15 38.5 17.2 C38.5 19.5 37 21.2 34 21.2 L29.2 21.2Z"
-        fill="var(--fg)"
-      />
-      {/* P — 粗竖干 + 开放弧线 */}
-      <path
-        fillRule="evenodd"
-        d="M48 2 L48 24 L51.2 24 L51.2 15.5 L56 15.5 C60.5 15.5 63 12.5 63 8.8 C63 5 60.5 2 56 2Z M51.2 4.8 L55.5 4.8 C58.5 4.8 60.2 6.5 60.2 8.8 C60.2 11.2 58.5 12.8 55.5 12.8 L51.2 12.8Z"
-        fill="var(--fg)"
-      />
-      {/* 品牌色底部装饰线 — 渐隐 */}
-      <defs>
-        <linearGradient id="accent-fade" x1="0" y1="0" x2="1" y2="0">
-          <stop offset="0%" stopColor="var(--brand)" stopOpacity="0.5" />
-          <stop offset="100%" stopColor="var(--brand)" stopOpacity="0" />
-        </linearGradient>
-      </defs>
-      <rect x="0" y="25.5" width="65" height="1" rx="0.5" fill="url(#accent-fade)" />
-    </svg>
   );
 }
 
@@ -137,7 +99,17 @@ export function Sidebar({ active, onNavigate }: SidebarProps) {
 
       {/* 品牌字标 */}
       <div className="sidebar-brand">
-        <Logo />
+        <img
+          className="sidebar-brand-icon"
+          src={brandIconUrl}
+          alt=""
+          aria-hidden="true"
+          draggable={false}
+        />
+        <div className="sidebar-brand-copy" aria-label="Avatar Batch Publisher">
+          <span className="sidebar-brand-kicker">Avatar Batch</span>
+          <span className="sidebar-brand-name">Publisher</span>
+        </div>
       </div>
 
       {/* 主导航 */}

@@ -1,18 +1,48 @@
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { useApi } from "./ApiContext";
+import {
+  getRuntimeLogDirectoryPath,
+  getRuntimeMode,
+  subscribeBackendLifecycle
+} from "../lib/runtime";
+
+type RuntimeMode = ReturnType<typeof getRuntimeMode>;
+type ServiceState = "starting" | "ready" | "degraded" | "stopped";
 
 interface ConnectionContextValue {
   connected: boolean;
   /** 每次断连恢复后递增，用作 useQuery deps 触发全局刷新 */
   refreshKey: number;
+  runtimeMode: RuntimeMode;
+  serviceState: ServiceState;
+  serviceMessage: string | null;
+  logDirectoryPath: string | null;
 }
 
-const ConnectionContext = createContext<ConnectionContextValue>({ connected: true, refreshKey: 0 });
+const initialRuntimeMode = getRuntimeMode();
+const initialConnected = initialRuntimeMode === "desktop-release" ? false : true;
+
+const ConnectionContext = createContext<ConnectionContextValue>({
+  connected: initialConnected,
+  refreshKey: 0,
+  runtimeMode: initialRuntimeMode,
+  serviceState: initialRuntimeMode === "desktop-release" ? "starting" : "ready",
+  serviceMessage: initialRuntimeMode === "desktop-release" ? "正在启动内置服务..." : null,
+  logDirectoryPath: getRuntimeLogDirectoryPath()
+});
 
 export function ConnectionProvider({ children }: { children: ReactNode }) {
   const api = useApi();
-  const [connected, setConnected] = useState(true);
+  const [connected, setConnected] = useState(initialConnected);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [runtimeMode] = useState<RuntimeMode>(initialRuntimeMode);
+  const [serviceState, setServiceState] = useState<ServiceState>(
+    initialRuntimeMode === "desktop-release" ? "starting" : "ready"
+  );
+  const [serviceMessage, setServiceMessage] = useState<string | null>(
+    initialRuntimeMode === "desktop-release" ? "正在启动内置服务..." : null
+  );
+  const [logDirectoryPath, setLogDirectoryPath] = useState<string | null>(getRuntimeLogDirectoryPath());
   const wasDisconnectedRef = useRef(false);
   const timerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
@@ -29,11 +59,29 @@ export function ConnectionProvider({ children }: { children: ReactNode }) {
             setRefreshKey((k) => k + 1);
           }
           setConnected(true);
+          setServiceState("ready");
+          setServiceMessage(null);
         }
       } catch {
         if (active) {
           wasDisconnectedRef.current = true;
           setConnected(false);
+          setServiceState((current) => {
+            if (current === "starting" || current === "stopped") {
+              return current;
+            }
+
+            return "degraded";
+          });
+          setServiceMessage((current) => {
+            if (current) {
+              return current;
+            }
+
+            return runtimeMode === "desktop-release"
+              ? "正在等待内置服务启动..."
+              : "无法连接到后端服务。";
+          });
         }
       }
       if (active) {
@@ -49,8 +97,22 @@ export function ConnectionProvider({ children }: { children: ReactNode }) {
     };
   }, [api]);
 
+  useEffect(() => {
+    const unsubscribe = subscribeBackendLifecycle((event) => {
+      setServiceState(event.state);
+      setServiceMessage(event.message);
+      setLogDirectoryPath(event.logDirectoryPath ?? null);
+    });
+
+    return () => {
+      unsubscribe?.();
+    };
+  }, []);
+
   return (
-    <ConnectionContext value={{ connected, refreshKey }}>
+    <ConnectionContext
+      value={{ connected, refreshKey, runtimeMode, serviceState, serviceMessage, logDirectoryPath }}
+    >
       {children}
     </ConnectionContext>
   );
