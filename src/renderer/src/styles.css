@@ -163,10 +163,12 @@ h1 {
   -webkit-app-region: no-drag;
 }
 .sidebar-brand-icon {
-  width: 24px;
-  height: 24px;
+  width: auto;
+  height: 28px;
+  max-width: 38px;
   flex-shrink: 0;
   display: block;
+  object-fit: contain;
   -webkit-user-drag: none;
 }
 .sidebar-brand-copy {
