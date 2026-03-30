@@ -1,0 +1,36 @@
+{
+  "name": "avatar-batch-publisher-frontend",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Cross-platform desktop frontend for AvatarBatchPublisher.",
+  "main": "./out/main/index.js",
+  "type": "module",
+  "engines": {
+    "node": ">=22",
+    "npm": ">=10"
+  },
+  "scripts": {
+    "dev": "electron-vite dev",
+    "start": "electron-vite preview",
+    "typecheck:node": "tsc --noEmit -p tsconfig.node.json --composite false",
+    "typecheck:web": "tsc --noEmit -p tsconfig.web.json --composite false",
+    "typecheck": "npm run typecheck:node && npm run typecheck:web",
+    "build": "npm run typecheck && electron-vite build"
+  },
+  "dependencies": {
+    "lucide-react": "^1.7.0",
+    "motion": "^12.38.0",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4"
+  },
+  "devDependencies": {
+    "@types/node": "^25.5.0",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^5.2.0",
+    "electron": "^41.0.4",
+    "electron-vite": "^5.0.0",
+    "typescript": "^6.0.2",
+    "vite": "^7.3.1"
+  }
+}
