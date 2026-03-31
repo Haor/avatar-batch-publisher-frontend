@@ -1,6 +1,6 @@
 # AvatarPublisher Frontend
 
-私人 VRChat 模型管理平台 `AvatarPublisher` 的桌面前端。
+私人 VRChat 模型管理平台 `Avatar Publisher` 的桌面前端。
 
 ## 技术栈
 
