@@ -1,4 +1,4 @@
-# ROADMAP — AvatarBatchPublisher Frontend 实装路线图
+# ROADMAP — AvatarPublisher Frontend 实装路线图
 
 > 生成日期: 2026-03-28
 > 技术栈: Electron 41 + React 19 + TypeScript 6 + Motion 12

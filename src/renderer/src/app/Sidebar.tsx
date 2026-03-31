@@ -106,8 +106,8 @@ export function Sidebar({ active, onNavigate }: SidebarProps) {
           aria-hidden="true"
           draggable={false}
         />
-        <div className="sidebar-brand-copy" aria-label="Avatar Batch Publisher">
-          <span className="sidebar-brand-kicker">Avatar Batch</span>
+        <div className="sidebar-brand-copy" aria-label="AvatarPublisher">
+          <span className="sidebar-brand-kicker">Avatar</span>
           <span className="sidebar-brand-name">Publisher</span>
         </div>
       </div>

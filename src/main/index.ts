@@ -138,7 +138,7 @@ function createWindow(): void {
     height: 960,
     minWidth: 1180,
     minHeight: 760,
-    title: "AvatarBatchPublisher",
+    title: "AvatarPublisher",
     backgroundColor: "#E4E9ED",
     autoHideMenuBar: true,
     titleBarStyle: process.platform === "darwin" ? "hiddenInset" : "default",

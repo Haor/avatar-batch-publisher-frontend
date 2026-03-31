@@ -53,7 +53,7 @@ export function RuntimeBootstrapScreenInner({
   return (
     <div className="runtime-bootstrap-screen">
       <div className="runtime-bootstrap-screen__panel">
-        <div className="runtime-bootstrap-screen__eyebrow">AvatarBatchPublisher</div>
+        <div className="runtime-bootstrap-screen__eyebrow">AvatarPublisher</div>
         <h1 className="runtime-bootstrap-screen__title">{getTitle(serviceState)}</h1>
         <p className="runtime-bootstrap-screen__description">
           {messageOverride ?? getDescription(serviceState, serviceMessage)}

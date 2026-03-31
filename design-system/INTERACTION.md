@@ -522,7 +522,7 @@ user_beta: 上传超时
 
 ```
 ┌─ 关于 ────────────────────────────────────┐
-│  后端服务     AvatarBatchPublisher         │
+│  后端服务     AvatarPublisher              │
 │  后端版本     1.0.0                        │
 │  后端状态     ● 正常                       │
 │  后端地址     http://localhost:5000         │

@@ -1,4 +1,4 @@
-# AvatarBatchPublisher — Design System
+# AvatarPublisher — Design System
 
 > 私人 VRChat 模型管理台
 > 色板: #f1f2f2 · #c8d8e1 · #89bdd3 · #c6d3d0
