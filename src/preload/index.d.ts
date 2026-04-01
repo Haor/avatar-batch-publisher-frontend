@@ -43,6 +43,8 @@ export interface AvatarBatchPublisherRuntimeBridge {
   mode: AvatarBatchPublisherRuntimeMode;
   backendBaseUrl?: string | null;
   logDirectoryPath?: string | null;
+  preferredSystemLanguages?: string[];
+  systemLocale?: string | null;
   onBackendLifecycle?: (
     listener: (event: AvatarBatchPublisherBackendLifecycleEvent) => void
   ) => (() => void) | void;

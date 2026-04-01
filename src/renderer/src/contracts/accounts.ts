@@ -1,3 +1,5 @@
+import type { LocalizedText } from "./localized-text";
+
 export interface AccountSummary {
   accountId: string;
   displayName: string;
@@ -8,6 +10,7 @@ export interface AccountSummary {
   canPublishAvatars: boolean;
   lastValidatedAt: string | null;
   sessionIssue: string | null;
+  sessionIssueText: LocalizedText | null;
   hasStoredCredential: boolean;
   needsReauthentication: boolean;
   supportsAutoRepair: boolean;
@@ -44,6 +47,7 @@ export interface AccountImportSourceResponse {
 export interface AccountLoginResponse {
   status: string;
   message: string;
+  messageText: LocalizedText | null;
   challengeId: string | null;
   account: AccountSummary | null;
 }
@@ -63,4 +67,5 @@ export interface AccountRepairResult {
   attempted: boolean;
   recovered: boolean;
   message: string;
+  messageText: LocalizedText | null;
 }

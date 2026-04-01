@@ -1,35 +1,6 @@
 import { useConnection } from "../../app/ConnectionContext";
 import { revealRuntimeLogDirectory } from "../../lib/runtime";
-
-function getTitle(state: "starting" | "ready" | "degraded" | "stopped"): string {
-  switch (state) {
-    case "starting":
-      return "正在启动内置服务";
-    case "degraded":
-      return "服务启动较慢";
-    case "stopped":
-      return "内置服务未能启动";
-    default:
-      return "正在准备";
-  }
-}
-
-function getDescription(state: "starting" | "ready" | "degraded" | "stopped", message: string | null): string {
-  if (message) {
-    return message;
-  }
-
-  switch (state) {
-    case "starting":
-      return "正在拉起本地后端并进行健康检查，请稍候。";
-    case "degraded":
-      return "服务仍在恢复中，应用会继续自动重试连接。";
-    case "stopped":
-      return "请查看日志确认内置服务为什么停止。";
-    default:
-      return "正在准备应用环境。";
-  }
-}
+import { useTranslation } from "react-i18next";
 
 export function RuntimeBootstrapScreen() {
   return <RuntimeBootstrapScreenInner />;
@@ -42,6 +13,7 @@ export function RuntimeBootstrapScreenInner({
   messageOverride?: string | null;
   progressCopyOverride?: string | null;
 }) {
+  const { t } = useTranslation(["runtime", "common"]);
   const { runtimeMode, serviceState, serviceMessage, logDirectoryPath } = useConnection();
 
   if (runtimeMode !== "desktop-release" || serviceState === "ready") {
@@ -53,16 +25,16 @@ export function RuntimeBootstrapScreenInner({
   return (
     <div className="runtime-bootstrap-screen">
       <div className="runtime-bootstrap-screen__panel">
-        <div className="runtime-bootstrap-screen__eyebrow">Avatar Publisher</div>
-        <h1 className="runtime-bootstrap-screen__title">{getTitle(serviceState)}</h1>
+        <div className="runtime-bootstrap-screen__eyebrow">{t("common:appName")}</div>
+        <h1 className="runtime-bootstrap-screen__title">{t(`runtime:bootstrap.title.${serviceState}`)}</h1>
         <p className="runtime-bootstrap-screen__description">
-          {messageOverride ?? getDescription(serviceState, serviceMessage)}
+          {messageOverride ?? serviceMessage ?? t(`runtime:bootstrap.description.${serviceState}`)}
         </p>
 
         <div className="runtime-bootstrap-screen__progress">
           <div className={`runtime-bootstrap-screen__pulse ${isStarting ? "" : "runtime-bootstrap-screen__pulse--warn"}`} />
           <div className="runtime-bootstrap-screen__progress-copy">
-            {progressCopyOverride ?? (isStarting ? "正在连接本地服务..." : "正在等待服务恢复...")}
+            {progressCopyOverride ?? t(isStarting ? "runtime:bootstrap.progressStarting" : "runtime:bootstrap.progressRecovering")}
           </div>
         </div>
 
@@ -74,7 +46,7 @@ export function RuntimeBootstrapScreenInner({
               void revealRuntimeLogDirectory();
             }}
           >
-            查看日志
+            {t("common:viewLogs")}
           </button>
         ) : null}
       </div>

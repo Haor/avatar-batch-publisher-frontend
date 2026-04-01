@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { motion } from "motion/react";
+import { useTranslation } from "react-i18next";
 import { RefreshCw, Star, Wrench, LogOut, Trash2, MoreHorizontal, KeyRound } from "lucide-react";
 import { spring } from "../../shared/springs";
 import { StatusDot } from "../../shared/components/StatusDot";
@@ -8,6 +9,7 @@ import { Badge } from "../../shared/components/Badge";
 import { ConfirmDialog } from "../../shared/components/ConfirmDialog";
 import { Spinner } from "../../shared/components/Spinner";
 import type { AccountSummary } from "../../contracts/accounts";
+import { resolveLocalizedText } from "../../i18n/localized-text";
 
 interface AccountListItemProps {
   account: AccountSummary;
@@ -21,17 +23,19 @@ interface AccountListItemProps {
 
 function sessionTone(account: AccountSummary): "ok" | "warn" | null {
   if (account.sessionValid) return "ok";
-  if (account.needsReauthentication || account.sessionState === "PendingTwoFactor") return "warn";
-  if (account.sessionState === "LoggedOut") return null;
+  if (account.needsReauthentication || account.sessionState === "pending_two_factor") return "warn";
+  if (account.sessionState === "logged_out") return null;
   return "warn";
 }
 
-function sessionLabel(account: AccountSummary): string {
-  if (account.sessionValid) return "已连接";
-  if (account.sessionState === "PendingTwoFactor") return "等待验证";
-  if (account.needsReauthentication) return "需重连";
-  if (account.sessionState === "LoggedOut") return "已登出";
-  return account.sessionIssue ?? "异常";
+function sessionLabel(account: AccountSummary, t: (key: string) => string): string {
+  if (account.sessionValid) return t("accounts:status.connected");
+  if (account.sessionState === "pending_two_factor") return t("accounts:status.pendingTwoFactor");
+  if (account.sessionState === "logged_out") return t("accounts:status.loggedOut");
+  const localizedIssue = resolveLocalizedText(account.sessionIssueText, account.sessionIssue);
+  if (localizedIssue) return localizedIssue;
+  if (account.needsReauthentication) return t("accounts:status.needsReconnect");
+  return account.sessionIssue ?? t("accounts:status.abnormal");
 }
 
 export function AccountListItem({
@@ -43,6 +47,7 @@ export function AccountListItem({
   onRemove,
   onRelogin,
 }: AccountListItemProps) {
+  const { t } = useTranslation(["accounts"]);
   const [loading, setLoading] = useState<string | null>(null);
   const [confirm, setConfirm] = useState<"logout" | "remove" | null>(null);
   const [showMore, setShowMore] = useState(false);
@@ -103,18 +108,18 @@ export function AccountListItem({
         <div className="account-status">
           {tone && <StatusDot tone={tone} animate />}
           <span className={`account-status-text ${!account.sessionValid ? "fg-faint" : ""}`}>
-            {sessionLabel(account)}
+            {sessionLabel(account, t)}
           </span>
         </div>
 
         {account.canPublishAvatars && account.sessionValid && (
-          <Badge tone="brand">可发布</Badge>
+          <Badge tone="brand">{t("accounts:badgePublishable")}</Badge>
         )}
 
         <div className="account-actions">
           <motion.button
             className="btn btn-ghost btn-icon"
-            title="刷新"
+            title={t("accounts:refreshTitle")}
             disabled={loading !== null}
             onClick={() => handleAction("refresh", () => onRefresh(account.accountId))}
             whileTap={{ scale: 0.97 }}
@@ -147,7 +152,7 @@ export function AccountListItem({
               className="account-more-item"
               onClick={() => handleAction("default", () => onSetDefault(account.accountId))}
             >
-              <Star size={13} strokeWidth={1.75} /> 设为默认
+              <Star size={13} strokeWidth={1.75} /> {t("accounts:actions.setDefault")}
             </button>
           )}
           {account.supportsAutoRepair && (
@@ -155,7 +160,7 @@ export function AccountListItem({
               className="account-more-item"
               onClick={() => handleAction("repair", () => onRepair(account.accountId))}
             >
-              <Wrench size={13} strokeWidth={1.75} /> 修复
+              <Wrench size={13} strokeWidth={1.75} /> {t("accounts:actions.repair")}
             </button>
           )}
           {account.needsReauthentication && (
@@ -163,7 +168,7 @@ export function AccountListItem({
               className="account-more-item"
               onClick={() => { setShowMore(false); onRelogin(account.accountId); }}
             >
-              <KeyRound size={13} strokeWidth={1.75} /> 重新登录
+              <KeyRound size={13} strokeWidth={1.75} /> {t("accounts:actions.relogin")}
             </button>
           )}
           <div className="account-more-divider" />
@@ -171,13 +176,13 @@ export function AccountListItem({
             className="account-more-item"
             onClick={() => { setShowMore(false); setConfirm("logout"); }}
           >
-            <LogOut size={13} strokeWidth={1.75} /> 登出
+            <LogOut size={13} strokeWidth={1.75} /> {t("accounts:actions.logout")}
           </button>
           <button
             className="account-more-item account-more-item--danger"
             onClick={() => { setShowMore(false); setConfirm("remove"); }}
           >
-            <Trash2 size={13} strokeWidth={1.75} /> 删除
+            <Trash2 size={13} strokeWidth={1.75} /> {t("accounts:actions.remove")}
           </button>
         </div>,
         document.body,
@@ -185,8 +190,8 @@ export function AccountListItem({
 
       <ConfirmDialog
         open={confirm === "logout"}
-        title="登出账号"
-        message={`确定要登出 ${account.displayName || account.loginName} 吗？`}
+        title={t("accounts:dialog.logoutTitle")}
+        message={t("accounts:dialog.logoutMessage", { name: account.displayName || account.loginName })}
         onConfirm={() => { setConfirm(null); handleAction("logout", () => onLogout(account.accountId)); }}
         onCancel={() => setConfirm(null)}
         loading={loading === "logout"}
@@ -194,10 +199,10 @@ export function AccountListItem({
 
       <ConfirmDialog
         open={confirm === "remove"}
-        title="删除账号"
-        message={`确定要删除 ${account.displayName || account.loginName} 吗？此操作不可撤销。`}
+        title={t("accounts:dialog.removeTitle")}
+        message={t("accounts:dialog.removeMessage", { name: account.displayName || account.loginName })}
         tone="err"
-        confirmLabel="删除"
+        confirmLabel={t("accounts:dialog.removeConfirm")}
         onConfirm={() => { setConfirm(null); handleAction("remove", () => onRemove(account.accountId)); }}
         onCancel={() => setConfirm(null)}
         loading={loading === "remove"}

@@ -5,6 +5,12 @@ export interface NetworkSettings {
 
 export interface UpdateNetworkSettingsRequest extends NetworkSettings {}
 
+export type LanguageLocale = "system" | "zh-CN" | "zh-TW" | "ja" | "en";
+
+export interface LanguageSettings {
+  locale: LanguageLocale;
+}
+
 export interface StorageSettings {
   basePath: string;
 }

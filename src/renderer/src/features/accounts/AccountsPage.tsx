@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { motion } from "motion/react";
+import { useTranslation } from "react-i18next";
 import { Users, LogIn, Download } from "lucide-react";
 import { spring, makeStagger, fadeIn } from "../../shared/springs";
 import { useApi } from "../../app/ApiContext";
@@ -7,15 +8,19 @@ import { useAccounts } from "../../app/AccountsContext";
 import { Spinner } from "../../shared/components/Spinner";
 import { EmptyState } from "../../shared/components/EmptyState";
 import { ErrorBanner } from "../../shared/components/ErrorBanner";
+import { useToast } from "../../app/ToastContext";
 import { AccountListItem } from "./AccountListItem";
 import { LoginModal } from "./LoginModal";
 import { ImportModal } from "./ImportModal";
+import { resolveLocalizedText } from "../../i18n/localized-text";
 
 const listStagger = makeStagger();
 
 export function AccountsPage() {
+  const { t } = useTranslation(["accounts"]);
   const api = useApi();
   const { accounts, loading, error, refetch } = useAccounts();
+  const { toast } = useToast();
   const [modal, setModal] = useState<"login" | "import" | null>(null);
 
   async function handleRefresh(id: string) {
@@ -34,7 +39,12 @@ export function AccountsPage() {
 
   async function handleRepair(id: string) {
     try {
-      await api.accounts.repair(id);
+      const result = await api.accounts.repair(id);
+      toast({
+        tone: result.recovered ? "ok" : "warn",
+        title: t("accounts:repairResult.toastTitle"),
+        detail: resolveLocalizedText(result.messageText, result.message) ?? undefined,
+      });
       refetch();
     } catch { /* swallow */ }
   }
@@ -61,7 +71,7 @@ export function AccountsPage() {
         animate={{ opacity: 1, y: 0 }}
         transition={spring.gentle}
       >
-        <h1>账号</h1>
+        <h1>{t("accounts:title")}</h1>
         <div className="accounts-page-actions">
           <motion.button
             className="btn btn-primary"
@@ -69,7 +79,7 @@ export function AccountsPage() {
             whileTap={{ scale: 0.97 }}
             transition={spring.snappy}
           >
-            <LogIn size={14} strokeWidth={1.75} /> 登录
+            <LogIn size={14} strokeWidth={1.75} /> {t("accounts:login")}
           </motion.button>
           <motion.button
             className="btn btn-secondary"
@@ -77,7 +87,7 @@ export function AccountsPage() {
             whileTap={{ scale: 0.97 }}
             transition={spring.snappy}
           >
-            <Download size={14} strokeWidth={1.75} /> 导入
+            <Download size={14} strokeWidth={1.75} /> {t("accounts:import")}
           </motion.button>
         </div>
       </motion.div>
@@ -89,8 +99,8 @@ export function AccountsPage() {
       ) : accounts.length === 0 ? (
         <EmptyState
           icon={<Users size={32} strokeWidth={1.5} />}
-          message="添加 VRChat 账号"
-          action={{ label: "登录", onClick: () => setModal("login") }}
+          message={t("accounts:emptyMessage")}
+          action={{ label: t("accounts:emptyAction"), onClick: () => setModal("login") }}
         />
       ) : (
         <motion.div

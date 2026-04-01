@@ -1,7 +1,9 @@
+import { memo } from "react";
 import { motion } from "motion/react";
+import { useTranslation } from "react-i18next";
 import { Check } from "lucide-react";
 import { spring } from "../../shared/springs";
-import { phaseLabels, getPhaseIndex, resolveStatusText, statusTone } from "../../shared/domain/publish-stages";
+import { getPhaseLabels, getPhaseIndex, resolveStatusText, statusTone } from "../../shared/domain/publish-stages";
 import { StatusDot } from "../../shared/components/StatusDot";
 import { ProgressBar } from "../../shared/components/ProgressBar";
 import { formatBytes } from "../../shared/format/bytes";
@@ -13,13 +15,15 @@ interface ExecutionCardProps {
   artifactName: string;
 }
 
-export function ExecutionCard({ execution, accountName, artifactName }: ExecutionCardProps) {
+export const ExecutionCard = memo(function ExecutionCard({ execution, accountName, artifactName }: ExecutionCardProps) {
+  useTranslation(["publish"]);
+  const phaseLabels = getPhaseLabels();
   const phaseIndex = getPhaseIndex(execution.stage, execution.status);
   const isRunning = execution.status === "running" || execution.status === "started";
   const isFailed = execution.status === "failed";
   const isDone = execution.status === "succeeded" || execution.status === "completed";
 
-  const statusText = resolveStatusText(execution.progressText, execution.stage, execution.status);
+  const statusText = resolveStatusText(null, execution.progressText, execution.stage, execution.status);
 
   return (
     <motion.div
@@ -75,4 +79,4 @@ export function ExecutionCard({ execution, accountName, artifactName }: Executio
       )}
     </motion.div>
   );
-}
+});

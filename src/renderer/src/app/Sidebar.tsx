@@ -1,5 +1,6 @@
-import { motion } from "motion/react";
+import { LayoutGroup, motion } from "motion/react";
 import { Home, Layers, Send, History, Users, Settings, Plus } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import brandIconUrl from "../../../../resources/icon1.png";
 import { spring } from "../shared/springs";
 import { StatusDot } from "../shared/components/StatusDot";
@@ -18,11 +19,13 @@ interface SidebarProps {
   onNavigate: (key: PageKey) => void;
 }
 
-function NavButton({ item, active, onNavigate }: {
-  item: { key: PageKey; label: string; icon: string };
+function NavButton({ item, active, onNavigate, layoutId = "nav-indicator" }: {
+  item: { key: PageKey; icon: string };
   active: PageKey;
   onNavigate: (key: PageKey) => void;
+  layoutId?: string;
 }) {
+  const { t } = useTranslation("navigation");
   const Icon = iconMap[item.icon];
   const isActive = active === item.key;
   return (
@@ -33,25 +36,26 @@ function NavButton({ item, active, onNavigate }: {
     >
       {isActive && (
         <motion.div
-          layoutId="nav-indicator"
+          layoutId={layoutId}
           className="nav-indicator"
           transition={spring.smooth}
         />
       )}
       <Icon size={17} strokeWidth={1.75} />
-      <span>{item.label}</span>
+      <span>{t(item.key)}</span>
     </button>
   );
 }
 
 function SidebarAccounts({ onNavigate }: { onNavigate: (key: PageKey) => void }) {
+  const { t } = useTranslation("navigation");
   const { accounts } = useAccounts();
   const { navigate } = useNavigation();
 
   return (
     <>
       <div className="sidebar-section">
-        <div className="sidebar-section-label">账号</div>
+        <div className="sidebar-section-label">{t("accountsSection")}</div>
       </div>
       <div className="sidebar-accounts">
         {accounts.map((account) => {
@@ -72,7 +76,7 @@ function SidebarAccounts({ onNavigate }: { onNavigate: (key: PageKey) => void })
             >
               <div className="sidebar-account-avatar">{initial}</div>
               <span className="sidebar-account-name">{account.loginName}</span>
-              {account.sessionState !== "LoggedOut" && (
+              {account.sessionState !== "logged_out" && (
                 <StatusDot tone={tone} animate />
               )}
             </div>
@@ -84,7 +88,7 @@ function SidebarAccounts({ onNavigate }: { onNavigate: (key: PageKey) => void })
           onClick={() => onNavigate("accounts")}
         >
           <Plus size={14} strokeWidth={1.75} />
-          <span>添加账号</span>
+          <span>{t("addAccount")}</span>
         </button>
       </div>
     </>
@@ -92,13 +96,15 @@ function SidebarAccounts({ onNavigate }: { onNavigate: (key: PageKey) => void })
 }
 
 export function Sidebar({ active, onNavigate }: SidebarProps) {
+  const { t } = useTranslation(["common", "navigation"]);
+
   return (
     <aside className="sidebar">
       {/* 顶部拖拽区 — 覆盖红绿灯行 + 品牌区 */}
       <div className="sidebar-drag-region" />
 
-      {/* 品牌字标 */}
-      <div className="sidebar-brand">
+      {/* 品牌字标 — 点击回首页 */}
+      <button className="sidebar-brand" onClick={() => onNavigate("home")}>
         <img
           className="sidebar-brand-icon"
           src={brandIconUrl}
@@ -106,18 +112,20 @@ export function Sidebar({ active, onNavigate }: SidebarProps) {
           aria-hidden="true"
           draggable={false}
         />
-        <div className="sidebar-brand-copy" aria-label="Avatar Publisher">
+        <div className="sidebar-brand-copy" aria-label={t("common:appName")}>
           <span className="sidebar-brand-kicker">Avatar</span>
           <span className="sidebar-brand-name">Publisher</span>
         </div>
-      </div>
+      </button>
 
       {/* 主导航 */}
-      <nav className="sidebar-nav">
-        {navItems.map((item) => (
-          <NavButton key={item.key} item={item} active={active} onNavigate={onNavigate} />
-        ))}
-      </nav>
+      <LayoutGroup id="sidebar-nav">
+        <nav className="sidebar-nav">
+          {navItems.map((item) => (
+            <NavButton key={item.key} item={item} active={active} onNavigate={onNavigate} />
+          ))}
+        </nav>
+      </LayoutGroup>
 
       {/* 账号 */}
       <SidebarAccounts onNavigate={onNavigate} />
@@ -125,7 +133,14 @@ export function Sidebar({ active, onNavigate }: SidebarProps) {
       {/* 底部 */}
       <div className="sidebar-bottom">
         <ConnectionStatus />
-        <NavButton item={settingsItem} active={active} onNavigate={onNavigate} />
+        <button
+          className="nav-item"
+          data-active={active === settingsItem.key || undefined}
+          onClick={() => onNavigate(settingsItem.key)}
+        >
+          <Settings size={17} strokeWidth={1.75} />
+          <span>{t("navigation:settings")}</span>
+        </button>
       </div>
     </aside>
   );

@@ -1,4 +1,5 @@
 import { motion } from "motion/react";
+import { useTranslation } from "react-i18next";
 import { Users } from "lucide-react";
 import { spring, makeStagger, fadeIn } from "../../../shared/springs";
 import { useAccounts } from "../../../app/AccountsContext";
@@ -12,6 +13,7 @@ interface SelectAccountsStepProps {
 const listStagger = makeStagger();
 
 export function SelectAccountsStep({ selected, onSelectionChange }: SelectAccountsStepProps) {
+  const { t } = useTranslation(["publish", "accounts"]);
   const { accounts } = useAccounts();
 
   function toggle(id: string) {
@@ -38,9 +40,9 @@ export function SelectAccountsStep({ selected, onSelectionChange }: SelectAccoun
           whileTap={{ scale: 0.97 }}
           transition={spring.snappy}
         >
-          <Users size={13} strokeWidth={1.75} /> 全选可用
+          <Users size={13} strokeWidth={1.75} /> {t("publish:steps.selectAllAvailable")}
         </motion.button>
-        <span className="fg-muted" style={{ fontSize: 13 }}>已选 {selected.length} 个</span>
+        <span className="fg-muted" style={{ fontSize: 13 }}>{t("publish:steps.selectedCount", { count: selected.length })}</span>
       </div>
       <motion.div
         className="account-select-list"
@@ -66,7 +68,7 @@ export function SelectAccountsStep({ selected, onSelectionChange }: SelectAccoun
                 <span className="account-select-name">{account.displayName || account.loginName}</span>
                 <span className="account-select-sub">
                   <StatusDot tone={account.sessionValid ? "ok" : "warn"} />
-                  {account.sessionValid ? "已连接" : "不可用"}
+                  {account.sessionValid ? t("publish:steps.accountConnected") : t("publish:steps.accountUnavailable")}
                 </span>
               </div>
             </motion.div>

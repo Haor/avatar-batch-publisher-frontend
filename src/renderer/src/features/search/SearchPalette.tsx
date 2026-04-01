@@ -1,5 +1,6 @@
 import { useState, useMemo, useRef, useEffect } from "react";
 import { motion } from "motion/react";
+import { useTranslation } from "react-i18next";
 import { Search, Home, Layers, Send, History, Users, Settings } from "lucide-react";
 import { spring } from "../../shared/springs";
 import { Modal } from "../../shared/components/Modal";
@@ -29,16 +30,10 @@ const pageIcons: Record<string, React.ReactNode> = {
   settings: <Settings size={14} strokeWidth={1.75} />,
 };
 
-const pages: { key: PageKey; label: string }[] = [
-  { key: "home", label: "主页" },
-  { key: "library", label: "模型库" },
-  { key: "publish", label: "发布" },
-  { key: "history", label: "历史" },
-  { key: "accounts", label: "账号" },
-  { key: "settings", label: "设置" },
-];
+const pages: PageKey[] = ["home", "library", "publish", "history", "accounts", "settings"];
 
 export function SearchPalette({ open, onClose }: SearchPaletteProps) {
+  const { t } = useTranslation(["navigation", "search"]);
   const { navigate } = useNavigation();
   const { accounts } = useAccounts();
   const [query, setQuery] = useState("");
@@ -58,13 +53,15 @@ export function SearchPalette({ open, onClose }: SearchPaletteProps) {
     const items: SearchResult[] = [];
 
     for (const page of pages) {
-      if (!q || page.label.toLowerCase().includes(q) || page.key.includes(q)) {
+      const label = t(`navigation:${page}`);
+
+      if (!q || label.toLowerCase().includes(q) || page.includes(q)) {
         items.push({
-          id: `page-${page.key}`,
-          label: page.label,
-          category: "页面",
-          icon: pageIcons[page.key],
-          action: () => { navigate(page.key); onClose(); },
+          id: `page-${page}`,
+          label,
+          category: t("search:categories.page"),
+          icon: pageIcons[page],
+          action: () => { navigate(page); onClose(); },
         });
       }
     }
@@ -75,7 +72,7 @@ export function SearchPalette({ open, onClose }: SearchPaletteProps) {
         items.push({
           id: `account-${account.accountId}`,
           label: name,
-          category: "账号",
+          category: t("search:categories.account"),
           icon: <Users size={14} strokeWidth={1.75} />,
           action: () => { navigate("accounts"); onClose(); },
         });
@@ -83,7 +80,7 @@ export function SearchPalette({ open, onClose }: SearchPaletteProps) {
     }
 
     return items.slice(0, 12);
-  }, [query, accounts, navigate, onClose]);
+  }, [query, accounts, navigate, onClose, t]);
 
   function handleKeyDown(e: React.KeyboardEvent) {
     if (e.key === "ArrowDown") {
@@ -106,7 +103,7 @@ export function SearchPalette({ open, onClose }: SearchPaletteProps) {
           <input
             ref={inputRef}
             className="search-palette-input"
-            placeholder="搜索页面、账号..."
+            placeholder={t("search:placeholder")}
             value={query}
             onChange={(e) => { setQuery(e.target.value); setActiveIndex(0); }}
             onKeyDown={handleKeyDown}

@@ -32,7 +32,7 @@ Frost Bento v5 — 冷调清透毛玻璃风格。
 - 品牌色: `#4A93AD`
 - 字体: DM Sans + Noto Sans SC + Playfair Display
 - 动画: Physics spring (snappy / smooth / gentle / bouncy)
-- 设计文档: `design-system/MASTER.md`
+- 设计文档: `../design-system/MASTER.md`
 
 ## 运行
 

@@ -1,8 +1,9 @@
-import { useCallback, startTransition, useState, useMemo, useEffect } from "react";
+import { useCallback, startTransition, useState, useMemo, useEffect, useRef } from "react";
 import { motion } from "motion/react";
+import { useTranslation } from "react-i18next";
 import { Send, Plus, ArrowUpRight, Cloud, HardDrive, Users, Check } from "lucide-react";
 import { spring, makeStagger, fadeIn } from "../../shared/springs";
-import { phaseLabels, resolveStatusText, statusTone, mergeExecutionProgress } from "../../shared/domain/publish-stages";
+import { getPhaseLabels, resolveStatusText, statusTone, mergeExecutionProgress } from "../../shared/domain/publish-stages";
 import { useApi } from "../../app/ApiContext";
 import { useActivePublish } from "../../app/ActivePublishContext";
 import { useConnection } from "../../app/ConnectionContext";
@@ -15,6 +16,7 @@ import { ProgressBar } from "../../shared/components/ProgressBar";
 import { ErrorBanner } from "../../shared/components/ErrorBanner";
 import { formatBytes } from "../../shared/format/bytes";
 import { formatDateTime } from "../../shared/format/date-time";
+import { resolveLocalizedText } from "../../i18n/localized-text";
 import type { HomeFocusExecution } from "../../contracts/home";
 import type { PublishQueueEventPayload } from "../../contracts/publish-queue";
 
@@ -30,6 +32,7 @@ const avatarColors = [
 ];
 
 export function HomePage() {
+  const { t } = useTranslation(["home"]);
   const api = useApi();
   const { activeQueueId, setActiveQueueId, clearActiveQueueId } = useActivePublish();
   const { navigate, activePage } = useNavigation();
@@ -40,12 +43,32 @@ export function HomePage() {
     (signal) => api.home.getOverview(8, signal),
     [refreshKey],
   );
-  usePageActivationRefresh("home", refetch);
+  const {
+    data: recentActivities,
+    error: recentActivitiesError,
+    refetch: refetchRecentActivities,
+  } = useQuery(
+    (signal) => api.home.getRecentActivities(8, signal),
+    [refreshKey],
+  );
+  const refreshHome = useCallback(() => {
+    refetch();
+    refetchRecentActivities();
+  }, [refetch, refetchRecentActivities]);
+  usePageActivationRefresh("home", refreshHome);
 
   const [liveFocus, setLiveFocus] = useState<Partial<HomeFocusExecution> | null>(null);
   const [dismissedQueueId, setDismissedQueueId] = useState<string | null>(null);
 
   const queueId = overview?.activeQueue?.queueId ?? activeQueueId ?? null;
+
+  // Debounce SSE-triggered refetches to coalesce rapid event bursts
+  const refetchTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const debouncedRefreshHome = useCallback(() => {
+    clearTimeout(refetchTimerRef.current);
+    refetchTimerRef.current = setTimeout(() => refreshHome(), 300);
+  }, [refreshHome]);
+  useEffect(() => () => clearTimeout(refetchTimerRef.current), []);
 
   const handleSseEvent = useCallback(
     (eventName: string, payload: PublishQueueEventPayload) => {
@@ -66,13 +89,13 @@ export function HomePage() {
         || eventName === "queue.execution.failed"
         || eventName === "queue.completed"
       ) {
-        refetch();
+        debouncedRefreshHome();
       }
     },
-    [refetch, clearActiveQueueId, queueId],
+    [debouncedRefreshHome, clearActiveQueueId, queueId],
   );
 
-  useEventStream(
+  const { connected: sseConnected } = useEventStream(
     () => {
       if (!queueId) return null;
       return api.publishQueue.stream(queueId, { onEvent: handleSseEvent });
@@ -92,15 +115,17 @@ export function HomePage() {
     }
   }, [overview?.activeQueue?.queueId, setActiveQueueId]);
 
+  // Polling fallback — reduced frequency when SSE is active, faster when disconnected
   useEffect(() => {
     if (activePage !== "home" || !queueId) return;
 
+    const interval = sseConnected ? 10000 : 2500;
     const timer = window.setInterval(() => {
-      refetch();
-    }, 2500);
+      refreshHome();
+    }, interval);
 
     return () => window.clearInterval(timer);
-  }, [activePage, queueId, refetch]);
+  }, [activePage, queueId, sseConnected, refreshHome]);
 
   const stats = overview?.stats;
   const activeQueue =
@@ -113,7 +138,8 @@ export function HomePage() {
     return { ...base, ...liveFocus } as HomeFocusExecution;
   }, [activeQueue?.focusExecution, liveFocus]);
 
-  const activities = overview?.recentActivities ?? [];
+  const activities = recentActivities ?? [];
+  const phaseLabels = getPhaseLabels();
 
   return (
     <motion.div
@@ -136,19 +162,19 @@ export function HomePage() {
                 <div className="stat-bar-item">
                   <Cloud size={14} strokeWidth={1.5} className="stat-bar-icon" />
                   <AnimatedNumber value={stats?.cloudAvatarCount ?? 0} className="stat-bar-number" />
-                  <span className="stat-bar-label">云端模型</span>
+                  <span className="stat-bar-label">{t("home:stats.cloudModels")}</span>
                 </div>
                 <div className="stat-bar-divider" />
                 <div className="stat-bar-item">
                   <HardDrive size={14} strokeWidth={1.5} className="stat-bar-icon" />
                   <AnimatedNumber value={stats?.localArtifactCount ?? 0} className="stat-bar-number" />
-                  <span className="stat-bar-label">本地模型</span>
+                  <span className="stat-bar-label">{t("home:stats.localModels")}</span>
                 </div>
                 <div className="stat-bar-divider" />
                 <div className="stat-bar-item">
                   <Users size={14} strokeWidth={1.5} className="stat-bar-icon" />
                   <AnimatedNumber value={stats?.connectedAccountCount ?? 0} className="stat-bar-number" />
-                  <span className="stat-bar-label">已连接</span>
+                  <span className="stat-bar-label">{t("home:stats.connectedAccounts")}</span>
                 </div>
               </div>
               <div className="stat-bar-actions">
@@ -158,7 +184,7 @@ export function HomePage() {
                   whileTap={{ scale: 0.97 }}
                   transition={spring.snappy}
                 >
-                  <Send size={13} strokeWidth={1.75} /> 发布
+                  <Send size={13} strokeWidth={1.75} /> {t("home:actions.publish")}
                 </motion.button>
                 <motion.button
                   className="btn btn-secondary"
@@ -166,7 +192,7 @@ export function HomePage() {
                   whileTap={{ scale: 0.97 }}
                   transition={spring.snappy}
                 >
-                  <Plus size={13} strokeWidth={1.75} /> 导入
+                  <Plus size={13} strokeWidth={1.75} /> {t("home:actions.import")}
                 </motion.button>
               </div>
             </>
@@ -180,7 +206,7 @@ export function HomePage() {
               <div className="task-header-left">
                 <span className="task-name">{activeQueue.name}</span>
                 <span className="task-detail">
-                  发布到 {activeQueue.executionCount} 个账号
+                  {t("home:activeQueue.publishToAccounts", { count: activeQueue.executionCount })}
                 </span>
               </div>
               <span className="task-fraction">
@@ -231,7 +257,7 @@ export function HomePage() {
                   animate={{ opacity: [0.4, 1, 0.4] }}
                   transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
                 />
-                {resolveStatusText(focus.progressText, focus.stage, focus.status ?? "pending")}
+                {resolveStatusText(null, focus.progressText, focus.stage, focus.status ?? "pending")}
                 {focus.bytesSent != null && focus.bytesTotal != null && (
                   <> · {formatBytes(focus.bytesSent)} / {formatBytes(focus.bytesTotal)}</>
                 )}
@@ -242,35 +268,37 @@ export function HomePage() {
 
         {/* 最近活动 */}
         <motion.div className="card activity-card bento-col-12" variants={fadeIn}>
-          <div className="activity-header">
-            <span className="section-label">最近</span>
+            <div className="activity-header">
+            <span className="section-label">{t("home:recent.section")}</span>
             <button className="btn btn-ghost" onClick={() => navigate("history")}>
-              全部 <ArrowUpRight size={11} strokeWidth={2} />
+              {t("home:recent.all")} <ArrowUpRight size={11} strokeWidth={2} />
             </button>
           </div>
           <div className="timeline">
             {activities.length === 0 ? (
-              <div style={{ padding: "16px 0", color: "var(--fg-faint)", fontSize: 13 }}>
-                暂无活动
-              </div>
+              recentActivitiesError ? (
+                <ErrorBanner error={recentActivitiesError} onRetry={refetchRecentActivities} />
+              ) : (
+                <div style={{ padding: "16px 0", color: "var(--fg-faint)", fontSize: 13 }}>
+                  {t("home:recent.empty")}
+                </div>
+              )
             ) : (
               activities.map((item) => (
-                <motion.div
+                <div
                   key={item.activityId}
                   className="timeline-item"
                   onClick={() => navigate("history", item.runId ? { historyRunId: item.runId } : undefined)}
-                  whileHover={{ backgroundColor: "var(--bg-inset)" }}
-                  transition={{ duration: 0.15 }}
                 >
                   <div className="timeline-dot-wrap">
                     <span className={`timeline-dot timeline-dot--${statusTone(item.status)}`} />
                   </div>
                   <div className="timeline-content">
-                    <span className="timeline-title">{item.title}</span>
-                    <span className="timeline-detail">{item.subtitle}</span>
+                    <span className="timeline-title">{resolveLocalizedText(item.titleText, item.title) ?? item.title}</span>
+                    <span className="timeline-detail">{resolveLocalizedText(item.subtitleText, item.subtitle) ?? item.subtitle}</span>
                   </div>
                   <span className="timeline-time">{formatDateTime(item.occurredAt)}</span>
-                </motion.div>
+                </div>
               ))
             )}
           </div>
@@ -278,9 +306,9 @@ export function HomePage() {
       </div>
 
       <motion.div className="home-shortcuts" variants={fadeIn}>
-        <span className="shortcut-hint"><kbd>{modKey}</kbd><kbd>N</kbd> 新建发布</span>
-        <span className="shortcut-hint"><kbd>{modKey}</kbd><kbd>I</kbd> 导入模型</span>
-        <span className="shortcut-hint"><kbd>{modKey}</kbd><kbd>K</kbd> 快速搜索</span>
+        <span className="shortcut-hint"><kbd>{modKey}</kbd><kbd>N</kbd> {t("home:shortcuts.newPublish")}</span>
+        <span className="shortcut-hint"><kbd>{modKey}</kbd><kbd>I</kbd> {t("home:shortcuts.importModel")}</span>
+        <span className="shortcut-hint"><kbd>{modKey}</kbd><kbd>K</kbd> {t("home:shortcuts.quickSearch")}</span>
       </motion.div>
     </motion.div>
   );

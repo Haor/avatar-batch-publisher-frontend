@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useRef, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useMemo, useRef, useState, type ReactNode } from "react";
 import type { PageKey } from "./navigation";
 
 export interface PublishNavigationPrefill {
@@ -50,8 +50,13 @@ export function NavigationProvider({
     return p;
   }, []);
 
+  const value = useMemo(
+    () => ({ activePage, navigationTick, navigate, consumePayload }),
+    [activePage, navigationTick, navigate, consumePayload],
+  );
+
   return (
-    <NavigationContext value={{ activePage, navigationTick, navigate, consumePayload }}>
+    <NavigationContext value={value}>
       {children}
     </NavigationContext>
   );

@@ -1,15 +1,17 @@
 import { useConnection } from "../../app/ConnectionContext";
+import { useTranslation } from "react-i18next";
 import { StatusDot } from "./StatusDot";
 
 export function ConnectionStatus() {
+  const { t } = useTranslation(["common", "runtime"]);
   const { connected, serviceState } = useConnection();
   const label = connected
-    ? "已连接"
+    ? t("common:connected")
     : serviceState === "starting"
-      ? "服务启动中"
+      ? t("runtime:connection.starting")
       : serviceState === "stopped"
-        ? "服务已停止"
-        : "未连接";
+        ? t("runtime:connection.stopped")
+        : t("runtime:connection.disconnected");
   const tone = connected ? "ok" : serviceState === "starting" ? "warn" : "err";
 
   return (

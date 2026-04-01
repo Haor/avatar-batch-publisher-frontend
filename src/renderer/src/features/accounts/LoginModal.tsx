@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { AnimatePresence, motion } from "motion/react";
+import { useTranslation } from "react-i18next";
 import { spring } from "../../shared/springs";
 import { Modal } from "../../shared/components/Modal";
 import { Input } from "../../shared/components/Input";
@@ -7,6 +8,7 @@ import { Spinner } from "../../shared/components/Spinner";
 import { ErrorBanner } from "../../shared/components/ErrorBanner";
 import { useApi } from "../../app/ApiContext";
 import { useMutation } from "../../shared/hooks/useMutation";
+import { resolveLocalizedText } from "../../i18n/localized-text";
 
 interface LoginModalProps {
   open: boolean;
@@ -15,12 +17,14 @@ interface LoginModalProps {
 }
 
 export function LoginModal({ open, onClose, onSuccess }: LoginModalProps) {
+  const { t } = useTranslation(["accounts", "common"]);
   const api = useApi();
   const [step, setStep] = useState<"credentials" | "twoFactor">("credentials");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [challengeId, setChallengeId] = useState<string | null>(null);
   const [code, setCode] = useState("");
+  const [serverPrompt, setServerPrompt] = useState<string | null>(null);
   const codeRef = useRef<HTMLInputElement>(null);
 
   const login = useMutation(
@@ -45,6 +49,7 @@ export function LoginModal({ open, onClose, onSuccess }: LoginModalProps) {
       setPassword("");
       setChallengeId(null);
       setCode("");
+      setServerPrompt(null);
       login.reset();
       verify.reset();
     }
@@ -62,6 +67,7 @@ export function LoginModal({ open, onClose, onSuccess }: LoginModalProps) {
         onClose();
       } else if (result.status === "requires_totp" || result.status === "requires_email_otp") {
         setChallengeId(result.challengeId);
+        setServerPrompt(resolveLocalizedText(result.messageText, result.message));
         setStep("twoFactor");
       }
     } catch { /* error shown via login.error */ }
@@ -85,13 +91,14 @@ export function LoginModal({ open, onClose, onSuccess }: LoginModalProps) {
     setStep("credentials");
     setChallengeId(null);
     setCode("");
+    setServerPrompt(null);
     verify.reset();
   }
 
   return (
     <Modal open={open} onClose={onClose} width={400}>
       <h2 style={{ font: "600 16px var(--font)", color: "var(--fg)", margin: "0 0 20px" }}>
-        {step === "credentials" ? "登录 VRChat 账号" : "两步验证"}
+        {step === "credentials" ? t("accounts:loginModal.credentialsTitle") : t("accounts:loginModal.twoFactorTitle")}
       </h2>
 
       <AnimatePresence mode="wait">
@@ -105,14 +112,14 @@ export function LoginModal({ open, onClose, onSuccess }: LoginModalProps) {
             transition={spring.smooth}
           >
             <Input
-              label="用户名或邮箱"
+              label={t("accounts:loginModal.usernameOrEmail")}
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               autoFocus
               onKeyDown={(e) => e.key === "Enter" && handleLogin()}
             />
             <Input
-              label="密码"
+              label={t("accounts:loginModal.password")}
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -126,7 +133,7 @@ export function LoginModal({ open, onClose, onSuccess }: LoginModalProps) {
                 whileTap={{ scale: 0.97 }}
                 transition={spring.snappy}
               >
-                取消
+                {t("common:cancel")}
               </motion.button>
               <motion.button
                 className="btn btn-primary"
@@ -135,7 +142,7 @@ export function LoginModal({ open, onClose, onSuccess }: LoginModalProps) {
                 whileTap={{ scale: 0.97 }}
                 transition={spring.snappy}
               >
-                {login.loading ? <Spinner size={14} /> : "登录"}
+                {login.loading ? <Spinner size={14} /> : t("accounts:login")}
               </motion.button>
             </div>
           </motion.div>
@@ -149,11 +156,11 @@ export function LoginModal({ open, onClose, onSuccess }: LoginModalProps) {
             transition={spring.smooth}
           >
             <p style={{ font: "400 14px var(--font)", color: "var(--fg-muted)", margin: 0 }}>
-              请输入验证码
+              {serverPrompt ?? t("accounts:loginModal.codePrompt")}
             </p>
             <Input
               ref={codeRef}
-              label="验证码"
+              label={t("accounts:loginModal.codeLabel")}
               value={code}
               onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
               maxLength={6}
@@ -170,7 +177,7 @@ export function LoginModal({ open, onClose, onSuccess }: LoginModalProps) {
                 whileTap={{ scale: 0.97 }}
                 transition={spring.snappy}
               >
-                返回
+                {t("accounts:loginModal.back")}
               </motion.button>
               <motion.button
                 className="btn btn-primary"
@@ -179,7 +186,7 @@ export function LoginModal({ open, onClose, onSuccess }: LoginModalProps) {
                 whileTap={{ scale: 0.97 }}
                 transition={spring.snappy}
               >
-                {verify.loading ? <Spinner size={14} /> : "验证"}
+                {verify.loading ? <Spinner size={14} /> : t("accounts:loginModal.verify")}
               </motion.button>
             </div>
           </motion.div>

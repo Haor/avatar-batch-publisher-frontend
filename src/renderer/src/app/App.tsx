@@ -1,5 +1,6 @@
-import { useState, useCallback, useRef, useEffect } from "react";
-import { LayoutGroup } from "motion/react";
+import { startTransition, useState, useCallback, useRef, useEffect } from "react";
+
+import { useTranslation } from "react-i18next";
 import { ApiProvider } from "./ApiContext";
 import { ConnectionProvider, useConnection } from "./ConnectionContext";
 import { AccountsProvider } from "./AccountsContext";
@@ -19,6 +20,8 @@ import { SettingsPage } from "../features/settings/SettingsPage";
 import { RuntimeServiceBanner } from "../shared/components/RuntimeServiceBanner";
 import { RuntimeBootstrapScreenInner } from "../shared/components/RuntimeBootstrapScreen";
 import { useApi } from "./ApiContext";
+import i18n from "../i18n";
+import { applyLanguagePreference } from "../i18n";
 
 const pageEntries: { key: PageKey; component: React.ComponentType }[] = [
   { key: "home", component: HomePage },
@@ -73,18 +76,16 @@ function AppChrome({
 
   return (
     <>
-      <LayoutGroup>
-        <Sidebar active={activePage} onNavigate={navigate} />
-        <main className="main">
-          {pageEntries.map(({ key, component: Page }) =>
-            visited.has(key) ? (
-              <PageSlot key={key} pageKey={key} active={key === activePage}>
-                <Page />
-              </PageSlot>
-            ) : null,
-          )}
-        </main>
-      </LayoutGroup>
+      <Sidebar active={activePage} onNavigate={navigate} />
+      <main className="main">
+        {pageEntries.map(({ key, component: Page }) =>
+          visited.has(key) ? (
+            <PageSlot key={key} pageKey={key} active={key === activePage}>
+              <Page />
+            </PageSlot>
+          ) : null,
+        )}
+      </main>
       <SearchPalette open={searchOpen} onClose={onCloseSearch} />
     </>
   );
@@ -109,6 +110,7 @@ export function App() {
   return (
     <ApiProvider>
       <ConnectionProvider>
+        <LanguageSettingsSync />
         <RuntimeBootstrapGate>
           <AccountsProvider>
             <ActivePublishProvider>
@@ -125,11 +127,67 @@ export function App() {
 
 export default App;
 
+function LanguageSettingsSync() {
+  const api = useApi();
+  const { runtimeMode, serviceState } = useConnection();
+  const attemptedRef = useRef(false);
+  const retryTimerRef = useRef<number | null>(null);
+  const [retryTick, setRetryTick] = useState(0);
+
+  useEffect(() => {
+    if (attemptedRef.current) {
+      return;
+    }
+
+    if (runtimeMode === "desktop-release" && serviceState !== "ready") {
+      return;
+    }
+
+    let cancelled = false;
+
+    async function syncLanguage() {
+      try {
+        const settings = await api.settings.getLanguage();
+        if (cancelled) {
+          return;
+        }
+
+        const locale = applyLanguagePreference(settings.locale);
+        startTransition(() => {
+          void i18n.changeLanguage(locale);
+        });
+        attemptedRef.current = true;
+      } catch {
+        // 初始化失败时沿用本地 bootstrap cache，并在短暂延迟后重试。
+        if (!cancelled) {
+          retryTimerRef.current = window.setTimeout(() => {
+            retryTimerRef.current = null;
+            setRetryTick((value) => value + 1);
+          }, 2000);
+        }
+      }
+    }
+
+    void syncLanguage();
+
+    return () => {
+      cancelled = true;
+      if (retryTimerRef.current !== null) {
+        window.clearTimeout(retryTimerRef.current);
+        retryTimerRef.current = null;
+      }
+    };
+  }, [api, retryTick, runtimeMode, serviceState]);
+
+  return null;
+}
+
 function RuntimeBootstrapGate({ children }: { children: React.ReactNode }) {
+  const { t } = useTranslation("runtime");
   const { runtimeMode, serviceState } = useConnection();
   const api = useApi();
   const [bootstrapComplete, setBootstrapComplete] = useState(runtimeMode !== "desktop-release");
-  const [bootstrapMessage, setBootstrapMessage] = useState<string | null>(null);
+  const [bootstrapMessage, setBootstrapMessage] = useState<{ key: string; values?: Record<string, string | number> } | null>(null);
 
   useEffect(() => {
     if (runtimeMode !== "desktop-release") {
@@ -147,7 +205,7 @@ function RuntimeBootstrapGate({ children }: { children: React.ReactNode }) {
 
     async function bootstrapSessions() {
       setBootstrapComplete(false);
-      setBootstrapMessage("正在校验账号会话...");
+      setBootstrapMessage({ key: "bootstrap.validatingSessions" });
 
       try {
         const response = await api.accounts.list();
@@ -161,8 +219,20 @@ function RuntimeBootstrapGate({ children }: { children: React.ReactNode }) {
           const account = refreshTargets[index];
           setBootstrapMessage(
             refreshTargets.length > 1
-              ? `正在校验账号会话（${index + 1}/${refreshTargets.length}）：${account.displayName}`
-              : `正在校验账号会话：${account.displayName}`
+              ? {
+                  key: "bootstrap.validatingSessionMulti",
+                  values: {
+                    current: index + 1,
+                    total: refreshTargets.length,
+                    name: account.displayName || account.loginName,
+                  },
+                }
+              : {
+                  key: "bootstrap.validatingSessionSingle",
+                  values: {
+                    name: account.displayName || account.loginName,
+                  },
+                }
           );
 
           try {
@@ -189,8 +259,8 @@ function RuntimeBootstrapGate({ children }: { children: React.ReactNode }) {
   if (runtimeMode === "desktop-release" && (serviceState !== "ready" || !bootstrapComplete)) {
     return (
       <RuntimeBootstrapScreenInner
-        messageOverride={serviceState === "ready" ? bootstrapMessage : null}
-        progressCopyOverride={serviceState === "ready" ? "正在同步本地会话状态..." : null}
+        messageOverride={serviceState === "ready" && bootstrapMessage ? t(bootstrapMessage.key, bootstrapMessage.values) : null}
+        progressCopyOverride={serviceState === "ready" ? t("bootstrap.syncingSessions") : null}
       />
     );
   }

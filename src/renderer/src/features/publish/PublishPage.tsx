@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect, useMemo } from "react";
 import { AnimatePresence, motion } from "motion/react";
+import { useTranslation } from "react-i18next";
 import { spring } from "../../shared/springs";
 import { useApi } from "../../app/ApiContext";
 import { useActivePublish } from "../../app/ActivePublishContext";
@@ -7,6 +8,7 @@ import { useNavigation } from "../../app/NavigationContext";
 import { useQuery } from "../../shared/hooks/useQuery";
 import { useMutation } from "../../shared/hooks/useMutation";
 import { Spinner } from "../../shared/components/Spinner";
+import { usePageActivationRefresh } from "../../shared/hooks/usePageActivationRefresh";
 import { StepIndicator } from "./StepIndicator";
 import { SelectArtifactStep } from "./steps/SelectArtifactStep";
 import { SelectAccountsStep } from "./steps/SelectAccountsStep";
@@ -14,9 +16,8 @@ import { ConfigureInfoStep, type PerArtifactConfig, type ArtifactInfo } from "./
 import { PreflightStep } from "./steps/PreflightStep";
 import { MonitorView } from "./MonitorView";
 
-const stepLabels = ["选择模型", "选择账号", "配置信息", "确认发布"];
-
 export function PublishPage() {
+  const { t } = useTranslation(["publish"]);
   const api = useApi();
   const { activeQueueId, setActiveQueueId, clearActiveQueueId } = useActivePublish();
   const { activePage, navigationTick, consumePayload } = useNavigation();
@@ -33,6 +34,12 @@ export function PublishPage() {
   const [canStart, setCanStart] = useState(false);
   const [queueId, setQueueId] = useState<string | null>(null);
   const [monitorTerminal, setMonitorTerminal] = useState(false);
+  const stepLabels = [
+    t("publish:stepLabels.selectModel"),
+    t("publish:stepLabels.selectAccounts"),
+    t("publish:stepLabels.configureInfo"),
+    t("publish:stepLabels.review"),
+  ];
 
   const resetWizard = useCallback(() => {
     setView("wizard");
@@ -47,10 +54,23 @@ export function PublishPage() {
   }, []);
 
   // artifacts 列表
-  const { data: artifactsData } = useQuery(
+  const { data: artifactsData, loading: artifactsLoading, refetch: refetchArtifacts } = useQuery(
     (signal) => api.artifacts.list(signal),
     [],
   );
+  usePageActivationRefresh("publish", refetchArtifacts);
+  const artifacts = artifactsData?.items ?? [];
+
+  useEffect(() => {
+    if (!artifactsData) return;
+
+    const validArtifactIds = new Set(artifactsData.items.map((artifact) => artifact.artifactId));
+
+    setSelectedArtifacts((prev) => {
+      const next = prev.filter((artifactId) => validArtifactIds.has(artifactId));
+      return next.length === prev.length ? prev : next;
+    });
+  }, [artifactsData]);
 
   // 选中的 artifact 信息
   const selectedArtifactInfos = useMemo<ArtifactInfo[]>(() => {
@@ -83,16 +103,24 @@ export function PublishPage() {
     });
   }, [selectedArtifactInfos, selectedArtifacts]);
 
-  function handlePerArtifactChange(artifactId: string, config: PerArtifactConfig) {
+  useEffect(() => {
+    if (view !== "wizard") return;
+    if (selectedArtifacts.length > 0) return;
+
+    setStep(0);
+    setCanStart(false);
+  }, [selectedArtifacts.length, view]);
+
+  const handlePerArtifactChange = useCallback((artifactId: string, config: PerArtifactConfig) => {
     setPerArtifactConfigs((prev) => new Map(prev).set(artifactId, config));
-  }
+  }, []);
 
   // 第一个模型的名称 (用于 preflight 和 queue name)
   const firstName = perArtifactConfigs.values().next().value?.name ?? "";
 
   const createQueue = useMutation(async () => {
     const response = await api.publishQueue.create({
-      queueName: firstName || "手动发布",
+      queueName: firstName || t("publish:manualQueueName"),
       items: selectedArtifacts.map((artifactId) => {
         const per = perArtifactConfigs.get(artifactId);
         return {
@@ -141,6 +169,7 @@ export function PublishPage() {
 
     const payload = consumePayload();
     if (payload?.publishArtifactIds?.length) {
+      refetchArtifacts();
       resetWizard();
       setSelectedArtifacts(payload.publishArtifactIds);
       if (payload.publishPrefill) {
@@ -167,7 +196,20 @@ export function PublishPage() {
       setMonitorTerminal(false);
       setView("monitor");
     }
-  }, [activePage, navigationTick, view, monitorTerminal, queueId, activeQueueId, resetWizard, consumePayload]);
+  }, [activePage, navigationTick, view, monitorTerminal, queueId, activeQueueId, resetWizard, consumePayload, refetchArtifacts]);
+
+  const preflightConfig = useMemo(() => {
+    const id = selectedArtifacts[0];
+    if (!id) return null;
+    const per = perArtifactConfigs.get(id);
+    return {
+      name: per?.name ?? firstName,
+      description: per?.description ?? "",
+      tags: per?.tags ?? [],
+      releaseStatus: per?.releaseStatus ?? "private",
+      imagePath: per?.imagePath ?? null,
+    };
+  }, [selectedArtifacts, perArtifactConfigs, firstName]);
 
   const canNextStep = (() => {
     switch (step) {
@@ -185,27 +227,25 @@ export function PublishPage() {
 
   return (
     <div className="publish-wizard">
-      <motion.div
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={spring.gentle}
-      >
+      <div>
         <StepIndicator currentStep={step} steps={stepLabels} />
-      </motion.div>
+      </div>
 
       <div className="step-content">
         <AnimatePresence mode="wait" initial={false}>
           <motion.div
             key={step}
-            initial={{ opacity: 0, x: direction * 30, filter: "blur(4px)" }}
-            animate={{ opacity: 1, x: 0, filter: "blur(0px)" }}
-            exit={{ opacity: 0, x: direction * -30, filter: "blur(4px)" }}
+            initial={{ opacity: 0, x: direction * 30 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: direction * -30 }}
             transition={spring.smooth}
           >
             {step === 0 && (
               <SelectArtifactStep
+                artifacts={artifacts}
                 selected={selectedArtifacts}
                 onSelectionChange={setSelectedArtifacts}
+                loading={artifactsLoading}
               />
             )}
             {step === 1 && (
@@ -221,20 +261,11 @@ export function PublishPage() {
                 onPerArtifactChange={handlePerArtifactChange}
               />
             )}
-            {step === 3 && selectedArtifacts[0] && (
+            {step === 3 && selectedArtifacts[0] && preflightConfig && (
               <PreflightStep
                 artifactId={selectedArtifacts[0]}
                 accountIds={selectedAccounts}
-                config={(() => {
-                  const per = perArtifactConfigs.get(selectedArtifacts[0]);
-                  return {
-                    name: per?.name ?? firstName,
-                    description: per?.description ?? "",
-                    tags: per?.tags ?? [],
-                    releaseStatus: per?.releaseStatus ?? "private",
-                    imagePath: per?.imagePath ?? null,
-                  };
-                })()}
+                config={preflightConfig}
                 onCanStartChange={setCanStart}
               />
             )}
@@ -250,7 +281,7 @@ export function PublishPage() {
             whileTap={{ scale: 0.97 }}
             transition={spring.snappy}
           >
-            上一步
+            {t("publish:actions.previous")}
           </motion.button>
         )}
         <div style={{ flex: 1 }} />
@@ -262,7 +293,7 @@ export function PublishPage() {
             whileTap={{ scale: 0.97 }}
             transition={spring.snappy}
           >
-            下一步
+            {t("publish:actions.next")}
           </motion.button>
         ) : (
           <motion.button
@@ -272,7 +303,7 @@ export function PublishPage() {
             whileTap={{ scale: 0.97 }}
             transition={spring.snappy}
           >
-            {createQueue.loading ? <Spinner size={14} /> : "开始发布"}
+            {createQueue.loading ? <Spinner size={14} /> : t("publish:actions.start")}
           </motion.button>
         )}
       </div>

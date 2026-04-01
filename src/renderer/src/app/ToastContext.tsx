@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useReducer, useRef, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useReducer, useRef, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "motion/react";
 import { spring } from "../shared/springs";
@@ -52,8 +52,10 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     timersRef.current.set(id, timer);
   }, []);
 
+  const value = useMemo(() => ({ toast }), [toast]);
+
   return (
-    <ToastContext value={{ toast }}>
+    <ToastContext value={value}>
       {children}
       {createPortal(
         <div className="toast-stack">

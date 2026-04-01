@@ -1,4 +1,5 @@
 import type { ArtifactSummary } from "./artifacts";
+import type { LocalizedText } from "./localized-text";
 
 export interface SaveToLibraryRequest {
   accountId: string;
@@ -26,6 +27,7 @@ export interface SaveToLibraryTask {
   status: "queued" | "running" | "completed" | "failed";
   stage: string | null;
   progressText: string | null;
+  progressTextResource: LocalizedText | null;
   progressValue: number | null;
   bytesReceived: number | null;
   bytesTotal: number | null;

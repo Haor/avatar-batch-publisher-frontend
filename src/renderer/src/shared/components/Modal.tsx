@@ -37,9 +37,9 @@ export function Modal({ open, onClose, children, width = 440 }: ModalProps) {
           <motion.div
             className="modal-content"
             style={{ width }}
-            initial={{ opacity: 0, scale: 0.95, filter: "blur(4px)" }}
-            animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
-            exit={{ opacity: 0, scale: 0.95, filter: "blur(4px)" }}
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
             transition={spring.smooth}
             onClick={(e) => e.stopPropagation()}
           >

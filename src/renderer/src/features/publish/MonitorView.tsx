@@ -1,5 +1,6 @@
-import { useReducer, useCallback, useEffect, useMemo, startTransition } from "react";
+import { useReducer, useCallback, useEffect, useMemo, useRef, startTransition } from "react";
 import { motion } from "motion/react";
+import { useTranslation } from "react-i18next";
 import { spring } from "../../shared/springs";
 import { mergeExecutionProgress, statusTone } from "../../shared/domain/publish-stages";
 import { useApi } from "../../app/ApiContext";
@@ -13,6 +14,16 @@ import { Spinner } from "../../shared/components/Spinner";
 import { ErrorBanner } from "../../shared/components/ErrorBanner";
 import { ExecutionCard } from "./ExecutionCard";
 import type { PublishQueueDetails, PublishQueueExecutionDetails, PublishQueueEventPayload } from "../../contracts/publish-queue";
+
+/** Events that warrant a full queue refetch (structural changes, not progress) */
+const REFETCH_EVENTS = new Set([
+  "queue.created",
+  "queue.started",
+  "queue.execution.started",
+  "queue.completed",
+  "queue.execution.completed",
+  "queue.execution.failed",
+]);
 
 interface MonitorViewProps {
   queueId: string;
@@ -67,6 +78,7 @@ function reducer(state: State, action: Action): State {
 }
 
 export function MonitorView({ queueId, onNewPublish, onTerminalChange }: MonitorViewProps) {
+  const { t } = useTranslation(["publish", "history"]);
   const api = useApi();
   const { accounts } = useAccounts();
   const { navigate } = useNavigation();
@@ -82,29 +94,28 @@ export function MonitorView({ queueId, onNewPublish, onTerminalChange }: Monitor
     [queueId],
   );
 
+  // Debounce SSE-triggered refetches to coalesce rapid event bursts
+  const refetchTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const debouncedRefetch = useCallback(() => {
+    clearTimeout(refetchTimerRef.current);
+    refetchTimerRef.current = setTimeout(() => refetch(), 300);
+  }, [refetch]);
+  useEffect(() => () => clearTimeout(refetchTimerRef.current), []);
+
   const handleSseEvent = useCallback(
     (event: string, payload: PublishQueueEventPayload) => {
       startTransition(() => {
         dispatch({ type: "sse", event, payload });
       });
 
-      const shouldRefetch = new Set([
-        "queue.created",
-        "queue.started",
-        "queue.execution.started",
-        "queue.completed",
-        "queue.execution.completed",
-        "queue.execution.failed",
-      ]);
-
-      if (shouldRefetch.has(event)) {
-        refetch();
+      if (REFETCH_EVENTS.has(event)) {
+        debouncedRefetch();
       }
     },
-    [refetch],
+    [debouncedRefetch],
   );
 
-  useEventStream(
+  const { connected: sseConnected } = useEventStream(
     () => {
       if (!queueId) return null;
       return api.publishQueue.stream(queueId, { onEvent: handleSseEvent });
@@ -153,15 +164,17 @@ export function MonitorView({ queueId, onNewPublish, onTerminalChange }: Monitor
     onTerminalChange?.(isCompleted);
   }, [isCompleted, onTerminalChange]);
 
+  // Polling fallback — reduced frequency when SSE is active, faster when disconnected
   useEffect(() => {
     if (!queue || isCompleted) return;
 
+    const interval = sseConnected ? 10000 : 2500;
     const timer = window.setInterval(() => {
       refetch();
-    }, 2500);
+    }, interval);
 
     return () => window.clearInterval(timer);
-  }, [queue, isCompleted, refetch]);
+  }, [queue, isCompleted, sseConnected, refetch]);
 
   if (loading && !queue) {
     return <div style={{ display: "flex", justifyContent: "center", padding: 48 }}><Spinner /></div>;
@@ -215,7 +228,7 @@ export function MonitorView({ queueId, onNewPublish, onTerminalChange }: Monitor
               whileTap={{ scale: 0.97 }}
               transition={spring.snappy}
             >
-              {retryMut.loading ? <Spinner size={14} /> : "重试失败项"}
+              {retryMut.loading ? <Spinner size={14} /> : t("history:retryFailed")}
             </motion.button>
           )}
           <motion.button
@@ -224,7 +237,7 @@ export function MonitorView({ queueId, onNewPublish, onTerminalChange }: Monitor
             whileTap={{ scale: 0.97 }}
             transition={spring.snappy}
           >
-            返回首页
+            {t("history:backHome")}
           </motion.button>
           <motion.button
             className="btn btn-secondary"
@@ -232,7 +245,7 @@ export function MonitorView({ queueId, onNewPublish, onTerminalChange }: Monitor
             whileTap={{ scale: 0.97 }}
             transition={spring.snappy}
           >
-            再次发布
+            {t("history:publishAgain")}
           </motion.button>
         </motion.div>
       )}

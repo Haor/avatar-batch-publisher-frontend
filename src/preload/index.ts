@@ -18,6 +18,18 @@ function readRuntimeArg(prefix: string): string | null {
 const runtimeMode = (readRuntimeArg("--abp-runtime-mode=") ?? "browser") as RuntimeMode;
 const backendBaseUrl = readRuntimeArg("--abp-backend-base-url=");
 const logDirectoryPath = readRuntimeArg("--abp-log-dir=");
+const preferredSystemLanguages = (() => {
+  const raw = readRuntimeArg("--abp-preferred-system-languages=");
+  if (!raw) return [];
+
+  try {
+    const parsed = JSON.parse(decodeURIComponent(raw));
+    return Array.isArray(parsed) ? parsed.filter((value): value is string => typeof value === "string") : [];
+  } catch {
+    return [];
+  }
+})();
+const systemLocale = readRuntimeArg("--abp-system-locale=");
 
 const runtimeInfo = {
   platform: process.platform,
@@ -30,6 +42,8 @@ const runtimeInfo = {
     mode: runtimeMode,
     backendBaseUrl,
     logDirectoryPath,
+    preferredSystemLanguages,
+    systemLocale,
     onBackendLifecycle: (listener: (event: BackendLifecycleEvent) => void) => {
       const wrapped = (_event: unknown, payload: BackendLifecycleEvent) => listener(payload);
       ipcRenderer.on("runtime:backend-lifecycle", wrapped);

@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback, useRef, startTransition } from "react";
 import { createPortal } from "react-dom";
 import { motion } from "motion/react";
+import { useTranslation } from "react-i18next";
 import { X, Send, FolderOpen, Trash2, Download, Layers, UserCheck, Image as ImageIcon } from "lucide-react";
 import { spring } from "../../shared/springs";
-import { saveToLibraryStageFallback } from "../../shared/domain/publish-stages";
+import { resolveSaveToLibraryStatusText } from "../../shared/domain/publish-stages";
 import { useApi } from "../../app/ApiContext";
 import { useNavigation } from "../../app/NavigationContext";
 import { useQuery } from "../../shared/hooks/useQuery";
@@ -33,19 +34,6 @@ interface DetailPanelProps {
 }
 
 export function DetailPanel({ type, id, accountId, previewImageUrl, onClose, onDeleted, onImported, onUpdated }: DetailPanelProps) {
-  // 锁定背景滚动 — 补偿滚动条宽度防止布局抖动
-  useEffect(() => {
-    const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
-    document.body.style.overflow = "hidden";
-    if (scrollbarWidth > 0) {
-      document.body.style.paddingRight = `${scrollbarWidth}px`;
-    }
-    return () => {
-      document.body.style.overflow = "";
-      document.body.style.paddingRight = "";
-    };
-  }, []);
-
   return createPortal(
     <motion.div
       className="detail-backdrop"
@@ -57,9 +45,9 @@ export function DetailPanel({ type, id, accountId, previewImageUrl, onClose, onD
     >
       <motion.div
         className="detail-modal"
-        initial={{ opacity: 0, scale: 0.96, filter: "blur(4px)" }}
-        animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
-        exit={{ opacity: 0, scale: 0.96, filter: "blur(4px)" }}
+        initial={{ opacity: 0, scale: 0.96 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.96 }}
         transition={spring.smooth}
         onClick={(e) => e.stopPropagation()}
       >
@@ -92,6 +80,7 @@ function CoverImage({ src, alt }: { src: string | null; alt: string }) {
 }
 
 function LocalDetail({ artifactId, previewImageUrl, onClose, onDeleted, onUpdated }: { artifactId: string; previewImageUrl?: string | null; onClose: () => void; onDeleted: () => void; onUpdated?: () => void }) {
+  const { t } = useTranslation(["library", "common", "accounts"]);
   const api = useApi();
   const { navigate } = useNavigation();
   const { data, loading, error, refetch } = useQuery((s) => api.artifacts.get(artifactId, s), [artifactId]);
@@ -125,8 +114,8 @@ function LocalDetail({ artifactId, previewImageUrl, onClose, onDeleted, onUpdate
   async function handleChangeCover() {
     try {
       const path = await pickSingleFile({
-        title: "选择封面图",
-        filters: [{ name: "图片", extensions: ["png", "jpg", "jpeg", "webp"] }],
+        title: t("library:detail.changeCover"),
+        filters: [{ name: t("library:detail.changeCover"), extensions: ["png", "jpg", "jpeg", "webp"] }],
       });
       if (!path) return;
       await updateMut.execute({ thumbnailPath: path });
@@ -147,7 +136,7 @@ function LocalDetail({ artifactId, previewImageUrl, onClose, onDeleted, onUpdate
         )}
         <div className="detail-cover-edit-hint">
           <ImageIcon size={16} strokeWidth={1.75} />
-          <span>更换封面</span>
+          <span>{t("library:detail.changeCover")}</span>
         </div>
       </div>
       <div className="detail-info">
@@ -161,28 +150,28 @@ function LocalDetail({ artifactId, previewImageUrl, onClose, onDeleted, onUpdate
               autoFocus
             />
             <motion.button className="btn btn-primary" onClick={handleRename} disabled={updateMut.loading} whileTap={{ scale: 0.97 }} transition={spring.snappy}>
-              {updateMut.loading ? <Spinner size={12} /> : "保存"}
+              {updateMut.loading ? <Spinner size={12} /> : t("common:save")}
             </motion.button>
             <motion.button className="btn btn-ghost" onClick={() => setEditingName(false)} whileTap={{ scale: 0.97 }} transition={spring.snappy}>
-              取消
+              {t("common:cancel")}
             </motion.button>
           </div>
         ) : (
           <h2
             className="detail-title detail-title--editable"
             onClick={() => { setEditName(data.name); setEditingName(true); }}
-            title="点击重命名"
+            title={t("library:detail.renameHint")}
           >
             {data.name}
           </h2>
         )}
         {updateMut.error && <ErrorBanner error={updateMut.error} />}
         <div className="detail-meta">
-          <MetaRow label="平台"><Badge tone="neutral">{data.platform}</Badge></MetaRow>
-          <MetaRow label="Unity">{data.unityVersion}</MetaRow>
-          <MetaRow label="文件"><span className="detail-mono">{data.bundleFileName}</span></MetaRow>
-          <MetaRow label="Hash"><span className="detail-mono">{data.bundleHash.slice(0, 16)}…</span></MetaRow>
-          <MetaRow label="创建">{formatDateTime(data.createdAt)}</MetaRow>
+          <MetaRow label={t("library:detail.labels.platform")}><Badge tone="neutral">{data.platform}</Badge></MetaRow>
+          <MetaRow label={t("library:detail.labels.unity")}>{data.unityVersion}</MetaRow>
+          <MetaRow label={t("library:detail.labels.file")}><span className="detail-mono">{data.bundleFileName}</span></MetaRow>
+          <MetaRow label={t("library:detail.labels.hash")}><span className="detail-mono">{data.bundleHash.slice(0, 16)}…</span></MetaRow>
+          <MetaRow label={t("library:detail.labels.created")}>{formatDateTime(data.createdAt)}</MetaRow>
         </div>
         <div className="detail-actions">
           <motion.button
@@ -201,11 +190,11 @@ function LocalDetail({ artifactId, previewImageUrl, onClose, onDeleted, onUpdate
             whileTap={{ scale: 0.97 }}
             transition={spring.snappy}
           >
-            <Send size={13} strokeWidth={1.75} /> 发布到账号
+            <Send size={13} strokeWidth={1.75} /> {t("library:detail.publishToAccounts")}
           </motion.button>
           <div className="detail-actions-row">
             <motion.button className="btn btn-secondary" style={{ flex: 1 }} onClick={() => revealPath(data.bundlePath).catch(() => {})} whileTap={{ scale: 0.97 }} transition={spring.snappy}>
-              <FolderOpen size={13} strokeWidth={1.75} /> 打开位置
+              <FolderOpen size={13} strokeWidth={1.75} /> {t("library:detail.openLocation")}
             </motion.button>
             <motion.button className="btn btn-ghost detail-danger-btn" onClick={() => setConfirmDelete(true)} whileTap={{ scale: 0.97 }} transition={spring.snappy}>
               <Trash2 size={13} strokeWidth={1.75} />
@@ -213,7 +202,7 @@ function LocalDetail({ artifactId, previewImageUrl, onClose, onDeleted, onUpdate
           </div>
         </div>
       </div>
-      <ConfirmDialog open={confirmDelete} title="删除本地模型" message={`确定要删除 "${data.name}" 吗？`} tone="err" confirmLabel="删除"
+      <ConfirmDialog open={confirmDelete} title={t("library:detail.deleteLocalTitle")} message={t("library:detail.deleteLocalMessage", { name: data.name })} tone="err" confirmLabel={t("accounts:dialog.removeConfirm")}
         onConfirm={async () => { try { await removeMut.execute(); setConfirmDelete(false); onDeleted(); } catch {} }}
         onCancel={() => setConfirmDelete(false)} loading={removeMut.loading} />
     </div>
@@ -221,6 +210,7 @@ function LocalDetail({ artifactId, previewImageUrl, onClose, onDeleted, onUpdate
 }
 
 function CloudDetail({ avatarId, accountId, previewImageUrl, onDeleted, onImported }: { avatarId: string; accountId: string; previewImageUrl?: string | null; onClose: () => void; onDeleted: () => void; onImported?: () => void }) {
+  const { t } = useTranslation(["library", "accounts"]);
   const api = useApi();
   const { data, loading, error, refetch } = useQuery((s) => api.myAvatars.get(accountId, avatarId, s), [accountId, avatarId]);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -291,16 +281,23 @@ function CloudDetail({ avatarId, accountId, previewImageUrl, onDeleted, onImport
     try {
       const accepted = await saveMut.execute();
       setTaskId(accepted.taskId);
-      setTaskState({ status: "queued", progressText: "排队中...", progressValue: null });
+      setTaskState({
+        status: "queued",
+        progressText: null,
+        progressTextResource: {
+          code: "publish:saveToLibraryStages.queued",
+          fallback: t("library:detail.queued"),
+        },
+        progressValue: null,
+      });
     } catch { /* error via saveMut.error */ }
   }
 
   const isRunning = taskState?.status === "queued" || taskState?.status === "running";
   const isCompleted = taskState?.status === "completed";
   const isFailed = taskState?.status === "failed";
-  const progressText = taskState?.progressText
-    ?? (taskState?.stage ? saveToLibraryStageFallback[taskState.stage] : null)
-    ?? (isRunning ? "下载中..." : null);
+  const progressText = resolveSaveToLibraryStatusText(taskState?.progressTextResource, taskState?.progressText, taskState?.stage ?? null, taskState?.status ?? null)
+    ?? (isRunning ? t("library:detail.downloading") : null);
   const progressValue = taskState?.progressValue ?? null;
 
   if (loading) return <div className="detail-layout"><CoverImage src={previewImageUrl ?? null} alt="" /><div className="detail-info"><div className="detail-modal-loading"><Spinner /></div></div></div>;
@@ -316,16 +313,16 @@ function CloudDetail({ avatarId, accountId, previewImageUrl, onDeleted, onImport
         <h2 className="detail-title">{avatar.name}</h2>
         {avatar.description && <p className="detail-desc">{avatar.description}</p>}
         <div className="detail-meta">
-          <MetaRow label="可见性">
+          <MetaRow label={t("library:detail.labels.visibility")}>
             <Badge tone={avatar.releaseStatus === "public" ? "brand" : "neutral"}>
-              {avatar.releaseStatus === "public" ? "所有人可见" : "仅自己可见"}
+              {avatar.releaseStatus === "public" ? t("library:detail.visibility.public") : t("library:detail.visibility.private")}
             </Badge>
           </MetaRow>
-          <MetaRow label="版本">v{avatar.version}</MetaRow>
-          {avatar.authorName && <MetaRow label="作者">{avatar.authorName}</MetaRow>}
-          {avatar.updatedAt && <MetaRow label="更新">{formatDateTime(avatar.updatedAt)}</MetaRow>}
+          <MetaRow label={t("library:detail.labels.version")}>v{avatar.version}</MetaRow>
+          {avatar.authorName && <MetaRow label={t("library:detail.labels.author")}>{avatar.authorName}</MetaRow>}
+          {avatar.updatedAt && <MetaRow label={t("library:detail.labels.updated")}>{formatDateTime(avatar.updatedAt)}</MetaRow>}
           {avatar.platforms.length > 0 && (
-            <MetaRow label="平台">
+            <MetaRow label={t("library:detail.labels.platform")}>
               <div className="detail-badges">
                 {[...new Set(avatar.platforms.map((p) => p.platform))].map((name) => (
                   <Badge key={name} tone="neutral">{name}</Badge>
@@ -345,13 +342,13 @@ function CloudDetail({ avatarId, accountId, previewImageUrl, onDeleted, onImport
                 transition={spring.snappy}
               >
                 {saveMut.loading ? (
-                  <><Spinner size={13} /> 提交中...</>
+                  <><Spinner size={13} /> {t("library:detail.submitting")}</>
                 ) : isCompleted ? (
-                  "已下载到本地库"
+                  t("library:detail.savedToLibrary")
                 ) : isRunning ? (
                   <><Spinner size={13} /> {progressText}</>
                 ) : (
-                  <><Download size={13} strokeWidth={1.75} /> 下载到本地库</>
+                  <><Download size={13} strokeWidth={1.75} /> {t("library:detail.downloadToLibrary")}</>
                 )}
               </motion.button>
               {/* 进度条 — 下载中显示 */}
@@ -383,22 +380,22 @@ function CloudDetail({ avatarId, accountId, previewImageUrl, onDeleted, onImport
             transition={spring.snappy}
           >
             {selectMut.loading ? (
-              <><Spinner size={13} /> 切换中...</>
+              <><Spinner size={13} /> {t("library:detail.switching")}</>
             ) : selectSuccess ? (
-              "已切换为当前模型"
+              t("library:detail.switchedToCurrent")
             ) : (
-              <><UserCheck size={13} strokeWidth={1.75} /> 使用该模型</>
+              <><UserCheck size={13} strokeWidth={1.75} /> {t("library:detail.useThisModel")}</>
             )}
           </motion.button>
           {selectMut.error && <ErrorBanner error={selectMut.error} />}
           {actions.canDelete && (
             <motion.button className="btn btn-ghost detail-danger-btn" onClick={() => setConfirmDelete(true)} whileTap={{ scale: 0.97 }} transition={spring.snappy}>
-              <Trash2 size={13} strokeWidth={1.75} /> 删除
+              <Trash2 size={13} strokeWidth={1.75} /> {t("accounts:actions.remove")}
             </motion.button>
           )}
         </div>
       </div>
-      <ConfirmDialog open={confirmDelete} title="删除云端模型" message={`"${avatar.name}" 将从 VRChat 永久删除，此操作不可撤销。`} tone="err" confirmLabel="永久删除"
+      <ConfirmDialog open={confirmDelete} title={t("library:detail.deleteCloudTitle")} message={t("library:detail.deleteCloudMessage", { name: avatar.name })} tone="err" confirmLabel={t("library:detail.deletePermanent")}
         onConfirm={async () => { try { await removeMut.execute(); setConfirmDelete(false); onDeleted(); } catch {} }}
         onCancel={() => setConfirmDelete(false)} loading={removeMut.loading} />
     </div>

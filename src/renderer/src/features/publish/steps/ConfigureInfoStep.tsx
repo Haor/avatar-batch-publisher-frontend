@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { motion } from "motion/react";
+import { useTranslation } from "react-i18next";
 import { Layers, Pencil, ChevronDown } from "lucide-react";
 import { spring } from "../../../shared/springs";
 import { Input } from "../../../shared/components/Input";
@@ -78,6 +79,7 @@ function ArtifactConfigCard({
   expanded: boolean;
   onToggle?: () => void;
 }) {
+  const { t } = useTranslation(["publish"]);
   const coverUrl = useLocalImage(config.imagePath);
   const [editingName, setEditingName] = useState(false);
 
@@ -89,8 +91,8 @@ function ArtifactConfigCard({
     if (!isDesktopBridgeAvailable()) return;
     try {
       const path = await pickSingleFile({
-        title: "选择封面图",
-        filters: [{ name: "图片", extensions: ["png", "jpg", "jpeg", "webp"] }],
+        title: t("publish:steps.chooseCover"),
+        filters: [{ name: t("publish:steps.imageFilter"), extensions: ["png", "jpg", "jpeg", "webp"] }],
       });
       if (path) update({ imagePath: path });
     } catch { /* */ }
@@ -153,20 +155,20 @@ function ArtifactConfigCard({
           transition={spring.smooth}
         >
           <div className="input-group">
-            <label className="input-label">描述</label>
+            <label className="input-label">{t("publish:steps.description")}</label>
             <textarea
               className="input-field configure-textarea"
               value={config.description}
               onChange={(e) => update({ description: e.target.value })}
               rows={2}
-              placeholder="可选"
+              placeholder={t("publish:steps.optional")}
             />
           </div>
 
           <div className="input-group">
-            <label className="input-label">标签</label>
+            <label className="input-label">{t("publish:steps.tags")}</label>
             <Input
-              placeholder="输入标签后按回车"
+              placeholder={t("publish:steps.tagPlaceholder")}
               onKeyDown={(e) => {
                 if (e.key === "Enter") {
                   e.preventDefault();
@@ -196,21 +198,21 @@ function ArtifactConfigCard({
           </div>
 
           <div className="input-group">
-            <label className="input-label">可见性</label>
+            <label className="input-label">{t("publish:steps.visibility")}</label>
             <div className="visibility-toggle">
               <button
                 className={`visibility-option ${config.releaseStatus === "private" ? "visibility-option--active" : ""}`}
                 onClick={() => update({ releaseStatus: "private" })}
               >
                 <span className="visibility-option-label">private</span>
-                <span className="visibility-option-desc">仅自己可见</span>
+                <span className="visibility-option-desc">{t("publish:steps.privateDesc")}</span>
               </button>
               <button
                 className={`visibility-option ${config.releaseStatus === "public" ? "visibility-option--active" : ""}`}
                 onClick={() => update({ releaseStatus: "public" })}
               >
                 <span className="visibility-option-label">public</span>
-                <span className="visibility-option-desc">所有人可见</span>
+                <span className="visibility-option-desc">{t("publish:steps.publicDesc")}</span>
               </button>
             </div>
           </div>

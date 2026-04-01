@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useApi } from "./ApiContext";
 import {
   getRuntimeLogDirectoryPath,
@@ -27,7 +27,7 @@ const ConnectionContext = createContext<ConnectionContextValue>({
   refreshKey: 0,
   runtimeMode: initialRuntimeMode,
   serviceState: initialRuntimeMode === "desktop-release" ? "starting" : "ready",
-  serviceMessage: initialRuntimeMode === "desktop-release" ? "正在启动内置服务..." : null,
+  serviceMessage: null,
   logDirectoryPath: getRuntimeLogDirectoryPath()
 });
 
@@ -39,9 +39,7 @@ export function ConnectionProvider({ children }: { children: ReactNode }) {
   const [serviceState, setServiceState] = useState<ServiceState>(
     initialRuntimeMode === "desktop-release" ? "starting" : "ready"
   );
-  const [serviceMessage, setServiceMessage] = useState<string | null>(
-    initialRuntimeMode === "desktop-release" ? "正在启动内置服务..." : null
-  );
+  const [serviceMessage, setServiceMessage] = useState<string | null>(null);
   const [logDirectoryPath, setLogDirectoryPath] = useState<string | null>(getRuntimeLogDirectoryPath());
   const wasDisconnectedRef = useRef(false);
   const timerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -73,15 +71,6 @@ export function ConnectionProvider({ children }: { children: ReactNode }) {
 
             return "degraded";
           });
-          setServiceMessage((current) => {
-            if (current) {
-              return current;
-            }
-
-            return runtimeMode === "desktop-release"
-              ? "正在等待内置服务启动..."
-              : "无法连接到后端服务。";
-          });
         }
       }
       if (active) {
@@ -109,9 +98,14 @@ export function ConnectionProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
+  const value = useMemo(
+    () => ({ connected, refreshKey, runtimeMode, serviceState, serviceMessage, logDirectoryPath }),
+    [connected, refreshKey, runtimeMode, serviceState, serviceMessage, logDirectoryPath],
+  );
+
   return (
     <ConnectionContext
-      value={{ connected, refreshKey, runtimeMode, serviceState, serviceMessage, logDirectoryPath }}
+      value={value}
     >
       {children}
     </ConnectionContext>

@@ -1,4 +1,5 @@
 import { ApiError } from "./errors";
+import i18n from "../i18n";
 
 type FileDialogFilter = {
   name: string;
@@ -42,7 +43,7 @@ export function isDesktopBridgeAvailable(): boolean {
 export async function pickFiles(options?: PickFilesOptions): Promise<string[] | null> {
   const bridge = getDesktopBridge();
   if (!bridge) {
-    throw new ApiError(0, "当前运行在浏览器调试模式，文件选择仅在 Electron App 中可用。", "desktop.unavailable", null, {});
+    throw new ApiError(0, i18n.t("runtime:desktop.filePickerUnavailable"), "desktop.unavailable", null, {}, null);
   }
 
   return bridge.pickFiles(options);
@@ -60,7 +61,7 @@ export async function pickSingleFile(options?: PickFilesOptions): Promise<string
 export async function pickDirectory(options?: PickDirectoryOptions): Promise<string | null> {
   const bridge = getDesktopBridge();
   if (!bridge) {
-    throw new ApiError(0, "当前运行在浏览器调试模式，目录选择仅在 Electron App 中可用。", "desktop.unavailable", null, {});
+    throw new ApiError(0, i18n.t("runtime:desktop.directoryPickerUnavailable"), "desktop.unavailable", null, {}, null);
   }
 
   return bridge.pickDirectory(options);
@@ -69,7 +70,7 @@ export async function pickDirectory(options?: PickDirectoryOptions): Promise<str
 export async function revealPath(absolutePath: string): Promise<void> {
   const bridge = getDesktopBridge();
   if (!bridge) {
-    throw new ApiError(0, "当前运行在浏览器调试模式，路径定位仅在 Electron App 中可用。", "desktop.unavailable", null, {});
+    throw new ApiError(0, i18n.t("runtime:desktop.revealPathUnavailable"), "desktop.unavailable", null, {}, null);
   }
 
   await bridge.revealPath(absolutePath);
@@ -80,7 +81,7 @@ export async function copyFileToDirectory(
 ): Promise<CopyFileToDirectoryResult> {
   const bridge = getDesktopBridge();
   if (!bridge) {
-    throw new ApiError(0, "当前运行在浏览器调试模式，文件导出仅在 Electron App 中可用。", "desktop.unavailable", null, {});
+    throw new ApiError(0, i18n.t("runtime:desktop.copyFileUnavailable"), "desktop.unavailable", null, {}, null);
   }
 
   return bridge.copyFileToDirectory(request);
@@ -89,9 +90,8 @@ export async function copyFileToDirectory(
 export async function readFileAsDataUrl(absolutePath: string): Promise<string> {
   const bridge = getDesktopBridge();
   if (!bridge) {
-    throw new ApiError(0, "当前运行在浏览器调试模式，文件读取仅在 Electron App 中可用。", "desktop.unavailable", null, {});
+    throw new ApiError(0, i18n.t("runtime:desktop.readFileUnavailable"), "desktop.unavailable", null, {}, null);
   }
 
   return bridge.readFileAsDataUrl(absolutePath);
 }
-

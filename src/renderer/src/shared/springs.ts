@@ -15,6 +15,6 @@ export function makeStagger(delay = 0.04) {
 
 /** 子元素 fadeIn variants */
 export const fadeIn = {
-  hidden: { opacity: 0, y: 8, filter: "blur(4px)" },
-  show: { opacity: 1, y: 0, filter: "blur(0px)", transition: spring.gentle },
+  hidden: { opacity: 0, y: 8 },
+  show: { opacity: 1, y: 0, transition: spring.gentle },
 };

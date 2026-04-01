@@ -22,6 +22,14 @@ export function getRuntimeLogDirectoryPath(): string | null {
   return getRuntimeBridge()?.logDirectoryPath?.trim() || null;
 }
 
+export function getRuntimePreferredSystemLanguages(): string[] {
+  return getRuntimeBridge()?.preferredSystemLanguages?.filter(Boolean) ?? [];
+}
+
+export function getRuntimeSystemLocale(): string | null {
+  return getRuntimeBridge()?.systemLocale?.trim() || null;
+}
+
 export function subscribeBackendLifecycle(
   listener: (event: BackendLifecycleEvent) => void
 ): (() => void) | null {

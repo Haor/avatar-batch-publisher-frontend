@@ -10,7 +10,7 @@ import type {
   AccountSummary,
   AccountVerifyTwoFactorRequest
 } from "../contracts/accounts";
-import type { HomeOverview } from "../contracts/home";
+import type { HomeOverview, HomeRecentActivity } from "../contracts/home";
 import type {
   ArtifactDetails,
   ArtifactImportFromBundleRequest,
@@ -47,7 +47,7 @@ import type {
 } from "../contracts/publish-queue";
 import type { AcceptedPublishResponse, PublishRunEventPayload } from "../contracts/publishes";
 import type { RunDetails, RunSummary } from "../contracts/runs";
-import type { NetworkSettings, UpdateNetworkSettingsRequest, StorageSettings } from "../contracts/settings";
+import type { LanguageSettings, NetworkSettings, UpdateNetworkSettingsRequest, StorageSettings } from "../contracts/settings";
 import type { CollectionResponse, PagedCollectionResponse, OperationStatusResponse } from "../contracts/shared";
 import { requestJson } from "./http";
 import { buildQueryString } from "./query-string";
@@ -71,7 +71,30 @@ export function createBackendApi(baseUrl: string) {
     },
     home: {
       getOverview: (recentLimit = 8, signal?: AbortSignal) =>
-        requestJson<HomeOverview>(baseUrl, `/home/overview${buildQueryString({ recentLimit })}`, { signal })
+        requestJson<HomeOverview>(baseUrl, `/home/overview${buildQueryString({ recentLimit })}`, { signal }),
+      getRecentActivities: (limit = 8, signal?: AbortSignal) =>
+        requestJson<CollectionResponse<HomeRecentActivity>>(
+          baseUrl,
+          `/home/recent-activities${buildQueryString({ limit })}`,
+          { signal },
+        ).then((response) => response.items),
+    },
+    history: {
+      listActivities: (
+        params: {
+          limit?: number;
+          offset?: number;
+        },
+        signal?: AbortSignal,
+      ) =>
+        requestJson<PagedCollectionResponse<HomeRecentActivity>>(
+          baseUrl,
+          `/history/activities${buildQueryString({
+            limit: params.limit ?? 15,
+            offset: params.offset ?? 0,
+          })}`,
+          { signal },
+        ),
     },
     accounts: {
       list: (signal?: AbortSignal) =>
@@ -291,6 +314,14 @@ export function createBackendApi(baseUrl: string) {
         })
     },
     settings: {
+      getLanguage: (signal?: AbortSignal) =>
+        requestJson<LanguageSettings>(baseUrl, "/settings/language", { signal }),
+      updateLanguage: (input: LanguageSettings, signal?: AbortSignal) =>
+        requestJson<LanguageSettings>(baseUrl, "/settings/language", {
+          method: "PUT",
+          signal,
+          body: JSON.stringify(input),
+        }),
       getNetwork: (signal?: AbortSignal) =>
         requestJson<NetworkSettings>(baseUrl, "/settings/network", { signal }),
       updateNetwork: (input: UpdateNetworkSettingsRequest, signal?: AbortSignal) =>

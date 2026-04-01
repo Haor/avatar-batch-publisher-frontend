@@ -1,3 +1,5 @@
+import type { LocalizedText } from "./localized-text";
+
 export interface CollectionResponse<TItem> {
   items: TItem[];
 }
@@ -23,6 +25,7 @@ export interface ApiErrorEnvelope {
   error: {
     code: string;
     message: string;
+    messageText?: LocalizedText | null;
     traceId?: string;
     details?: Record<string, string>;
   };

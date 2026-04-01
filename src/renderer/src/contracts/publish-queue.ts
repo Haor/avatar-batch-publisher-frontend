@@ -1,7 +1,11 @@
+import type { LocalizedText } from "./localized-text";
+
 export interface PublishPreflightCheck {
   key: string;
   title: string;
+  titleText: LocalizedText | null;
   detail: string;
+  detailText: LocalizedText | null;
   isPassing: boolean;
 }
 
@@ -18,8 +22,11 @@ export interface PublishPreflightRequest {
 export interface PublishPreflightResult {
   canStart: boolean;
   summary: string;
+  summaryText: LocalizedText | null;
   primaryActionHint: string;
+  primaryActionHintText: LocalizedText | null;
   accountSelectionLabel: string;
+  accountSelectionLabelText: LocalizedText | null;
   checks: PublishPreflightCheck[];
 }
 

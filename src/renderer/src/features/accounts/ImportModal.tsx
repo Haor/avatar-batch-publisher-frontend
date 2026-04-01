@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { motion } from "motion/react";
+import { useTranslation } from "react-i18next";
 import { FolderOpen, Download } from "lucide-react";
 import { spring } from "../../shared/springs";
 import { Modal } from "../../shared/components/Modal";
@@ -18,6 +19,7 @@ interface ImportModalProps {
 }
 
 export function ImportModal({ open, onClose, onSuccess }: ImportModalProps) {
+  const { t } = useTranslation(["accounts", "common"]);
   const api = useApi();
   const [result, setResult] = useState<AccountImportResult | null>(null);
 
@@ -45,8 +47,8 @@ export function ImportModal({ open, onClose, onSuccess }: ImportModalProps) {
   async function handlePickFile() {
     try {
       const path = await pickSingleFile({
-        title: "选择 VRChat 会话文件",
-        filters: [{ name: "所有文件", extensions: ["*"] }],
+        title: t("accounts:importModal.chooseSessionFile"),
+        filters: [{ name: t("accounts:importModal.allFiles"), extensions: ["*"] }],
       });
       if (path) await handleImport(path);
     } catch { /* ignore desktop bridge errors in browser */ }
@@ -61,26 +63,26 @@ export function ImportModal({ open, onClose, onSuccess }: ImportModalProps) {
   return (
     <Modal open={open} onClose={handleClose} width={420}>
       <h2 style={{ font: "600 16px var(--font)", color: "var(--fg)", margin: "0 0 20px" }}>
-        导入账号会话
+        {t("accounts:importModal.title")}
       </h2>
 
       {result ? (
         <div className="import-result">
           <p style={{ font: "400 14px var(--font)", color: "var(--fg-muted)", margin: "0 0 16px" }}>
-            导入完成
+            {t("accounts:importModal.importDone")}
           </p>
           <div className="import-result-stats">
             <div className="import-result-stat">
               <span className="import-result-number">{result.importedCount}</span>
-              <span className="import-result-label">新导入</span>
+              <span className="import-result-label">{t("accounts:importModal.imported")}</span>
             </div>
             <div className="import-result-stat">
               <span className="import-result-number">{result.updatedCount}</span>
-              <span className="import-result-label">已更新</span>
+              <span className="import-result-label">{t("accounts:importModal.updated")}</span>
             </div>
             <div className="import-result-stat">
               <span className="import-result-number">{result.skippedCount}</span>
-              <span className="import-result-label">已跳过</span>
+              <span className="import-result-label">{t("accounts:importModal.skipped")}</span>
             </div>
           </div>
           <div className="login-form-actions" style={{ paddingTop: 16 }}>
@@ -90,7 +92,7 @@ export function ImportModal({ open, onClose, onSuccess }: ImportModalProps) {
               whileTap={{ scale: 0.97 }}
               transition={spring.snappy}
             >
-              完成
+              {t("accounts:importModal.done")}
             </motion.button>
           </div>
         </div>
@@ -98,7 +100,7 @@ export function ImportModal({ open, onClose, onSuccess }: ImportModalProps) {
         <div className="login-form">
           {source.data && (
             <div className="import-source-path">
-              <span className="fg-faint" style={{ fontSize: 12 }}>建议路径</span>
+              <span className="fg-faint" style={{ fontSize: 12 }}>{t("accounts:importModal.suggestedPath")}</span>
               <code className="import-path-text">{source.data.suggestedSourcePath}</code>
             </div>
           )}
@@ -113,7 +115,7 @@ export function ImportModal({ open, onClose, onSuccess }: ImportModalProps) {
               whileTap={{ scale: 0.97 }}
               transition={spring.snappy}
             >
-              {importMut.loading ? <Spinner size={14} /> : <><Download size={14} strokeWidth={1.75} /> 从默认路径导入</>}
+              {importMut.loading ? <Spinner size={14} /> : <><Download size={14} strokeWidth={1.75} /> {t("accounts:importModal.importDefault")}</>}
             </motion.button>
             <motion.button
               className="btn btn-secondary btn-full"
@@ -122,7 +124,7 @@ export function ImportModal({ open, onClose, onSuccess }: ImportModalProps) {
               whileTap={{ scale: 0.97 }}
               transition={spring.snappy}
             >
-              <FolderOpen size={14} strokeWidth={1.75} /> 选择文件
+              <FolderOpen size={14} strokeWidth={1.75} /> {t("accounts:importModal.chooseFile")}
             </motion.button>
           </div>
 
@@ -133,7 +135,7 @@ export function ImportModal({ open, onClose, onSuccess }: ImportModalProps) {
               whileTap={{ scale: 0.97 }}
               transition={spring.snappy}
             >
-              取消
+              {t("common:cancel")}
             </motion.button>
           </div>
         </div>

@@ -1,4 +1,5 @@
 import { motion } from "motion/react";
+import { useTranslation } from "react-i18next";
 import { spring } from "../springs";
 import { Modal } from "./Modal";
 import { Spinner } from "./Spinner";
@@ -19,13 +20,15 @@ export function ConfirmDialog({
   open,
   title,
   message,
-  confirmLabel = "确认",
-  cancelLabel = "取消",
+  confirmLabel,
+  cancelLabel,
   tone = "brand",
   onConfirm,
   onCancel,
   loading,
 }: ConfirmDialogProps) {
+  const { t } = useTranslation("common");
+
   return (
     <Modal open={open} onClose={onCancel} width={380}>
       <div className="confirm-dialog">
@@ -39,7 +42,7 @@ export function ConfirmDialog({
             whileTap={{ scale: 0.97 }}
             transition={spring.snappy}
           >
-            {cancelLabel}
+            {cancelLabel ?? t("cancel")}
           </motion.button>
           <motion.button
             className={`btn ${tone === "err" ? "btn-danger" : "btn-primary"}`}
@@ -48,7 +51,7 @@ export function ConfirmDialog({
             whileTap={{ scale: 0.97 }}
             transition={spring.snappy}
           >
-            {loading ? <Spinner size={14} /> : confirmLabel}
+            {loading ? <Spinner size={14} /> : (confirmLabel ?? t("confirm"))}
           </motion.button>
         </div>
       </div>

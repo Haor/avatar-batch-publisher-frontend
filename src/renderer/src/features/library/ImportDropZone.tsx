@@ -1,5 +1,6 @@
 import { useState, type DragEvent } from "react";
 import { motion } from "motion/react";
+import { useTranslation } from "react-i18next";
 import { Plus } from "lucide-react";
 import { spring, fadeIn } from "../../shared/springs";
 import { useApi } from "../../app/ApiContext";
@@ -12,6 +13,7 @@ interface ImportDropZoneProps {
 }
 
 export function ImportDropZone({ onImported }: ImportDropZoneProps) {
+  const { t } = useTranslation(["library"]);
   const api = useApi();
   const [dragOver, setDragOver] = useState(false);
 
@@ -64,8 +66,8 @@ export function ImportDropZone({ onImported }: ImportDropZoneProps) {
   async function handleClick() {
     try {
       const paths = await pickFiles({
-        title: "选择模型文件",
-        filters: [{ name: "VRChat Avatar", extensions: ["vrca", "manifest"] }],
+        title: t("library:importDropZone.chooseModelFiles"),
+        filters: [{ name: t("library:importDropZone.avatarFilter"), extensions: ["vrca", "manifest"] }],
         allowMultiple: true,
       });
       if (!paths) return;
@@ -95,7 +97,7 @@ export function ImportDropZone({ onImported }: ImportDropZoneProps) {
       variants={fadeIn}
     >
       {loading ? <Spinner size={20} /> : <Plus size={20} strokeWidth={1.75} />}
-      <span>{loading ? "导入中..." : "导入模型"}</span>
+      <span>{loading ? t("library:importDropZone.importing") : t("library:importDropZone.importModel")}</span>
     </motion.div>
   );
 }

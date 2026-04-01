@@ -133,6 +133,8 @@ function registerDesktopHandlers(): void {
 function createWindow(): void {
   const backendBaseUrl = process.env.VITE_BACKEND_BASE_URL?.trim() || "http://127.0.0.1:38124/api/v1";
   const logDirectoryPath = app.getPath("logs");
+  const preferredSystemLanguages = encodeURIComponent(JSON.stringify(app.getPreferredSystemLanguages()));
+  const systemLocale = app.getSystemLocale();
   const window = new BrowserWindow({
     width: 1460,
     height: 960,
@@ -149,7 +151,9 @@ function createWindow(): void {
       additionalArguments: [
         "--abp-runtime-mode=desktop-dev",
         `--abp-backend-base-url=${backendBaseUrl}`,
-        `--abp-log-dir=${logDirectoryPath}`
+        `--abp-log-dir=${logDirectoryPath}`,
+        `--abp-preferred-system-languages=${preferredSystemLanguages}`,
+        `--abp-system-locale=${systemLocale}`
       ]
     }
   });

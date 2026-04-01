@@ -1,3 +1,5 @@
+import type { LocalizedText } from "./localized-text";
+
 export interface HomeStats {
   cloudAvatarCount: number;
   localArtifactCount: number;
@@ -42,6 +44,7 @@ export interface HomeFocusExecution {
   bytesTotal: number | null;
   phaseKey: string;
   phaseLabel: string;
+  phaseLabelText: LocalizedText | null;
   phaseIndex: number;
   lastError: string | null;
 }
@@ -52,6 +55,8 @@ export interface HomeRecentActivity {
   status: string;
   title: string;
   subtitle: string;
+  titleText: LocalizedText | null;
+  subtitleText: LocalizedText | null;
   occurredAt: string;
   queueId: string | null;
   runId: string | null;

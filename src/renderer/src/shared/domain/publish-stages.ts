@@ -1,35 +1,78 @@
-/** 发布流水线 4 个阶段标签 */
-export const phaseLabels = ["准备", "处理", "上传", "完成"] as const;
+import i18n from "../../i18n";
+import type { LocalizedText } from "../../contracts/localized-text";
+import { resolveLocalizedText } from "../../i18n/localized-text";
 
-/** stage/status -> 中文 fallback 文案 */
-export const stageFallback: Record<string, string> = {
-  pending: "等待开始",
-  preflight: "检查上传条件",
-  reserve_avatar: "创建远端记录",
-  reserved: "远端已预留",
-  rewriting: "处理模型包",
-  uploading: "上传模型文件",
-  polling: "等待处理",
-  completed: "上传完成",
-  succeeded: "上传完成",
-  completed_with_failures: "部分失败",
-  cancelled: "已取消",
-  failed: "上传失败",
+const phaseLabelKeys = [
+  "publish:domain.phaseLabels.prepare",
+  "publish:domain.phaseLabels.process",
+  "publish:domain.phaseLabels.upload",
+  "publish:domain.phaseLabels.done",
+] as const;
+
+const stageFallbackKeys: Record<string, string> = {
+  pending: "publish:domain.stages.pending",
+  preflight: "publish:domain.stages.preflight",
+  reserve_avatar: "publish:domain.stages.reserve_avatar",
+  reserved: "publish:domain.stages.reserved",
+  rewriting: "publish:domain.stages.rewriting",
+  uploading: "publish:domain.stages.uploading",
+  polling: "publish:domain.stages.polling",
+  completed: "publish:domain.stages.completed",
+  succeeded: "publish:domain.stages.succeeded",
+  completed_with_failures: "publish:domain.stages.completed_with_failures",
+  cancelled: "publish:domain.stages.cancelled",
+  failed: "publish:domain.stages.failed",
 };
 
-/** 三级 fallback: progressText > stage 文案 > status 文案 */
+const saveToLibraryStageKeys: Record<string, string> = {
+  resolving_avatar: "publish:saveToLibraryStages.resolving_avatar",
+  preparing_library: "publish:saveToLibraryStages.preparing_library",
+  downloading: "publish:saveToLibraryStages.downloading",
+  importing_artifact: "publish:saveToLibraryStages.importing_artifact",
+  linking_library: "publish:saveToLibraryStages.linking_library",
+  completed: "publish:saveToLibraryStages.completed",
+  queued: "publish:saveToLibraryStages.queued",
+  failed: "publish:saveToLibraryStages.failed",
+};
+
+export function getPhaseLabels(): string[] {
+  return phaseLabelKeys.map((key) => i18n.t(key));
+}
+
 export function resolveStatusText(
+  progressTextResource: LocalizedText | null | undefined,
   progressText: string | null | undefined,
   stage: string | null | undefined,
   status: string | undefined,
 ): string {
-  return progressText
-    ?? (stage ? stageFallback[stage] : undefined)
-    ?? (status ? stageFallback[status] : undefined)
-    ?? "进行中";
+  return (
+    resolveLocalizedText(progressTextResource) ??
+    progressText ??
+    (stage ? translateKey(stageFallbackKeys[stage]) : undefined) ??
+    (status ? translateKey(stageFallbackKeys[status]) : undefined) ??
+    i18n.t("publish:domain.inProgress")
+  );
 }
 
-/** 从 stage/status 推算 phaseIndex (0-3) */
+export function resolveSaveToLibraryStatusText(
+  progressTextResource: LocalizedText | null | undefined,
+  progressText: string | null | undefined,
+  stage: string | null | undefined,
+  status: string | null | undefined,
+): string | null {
+  return (
+    resolveLocalizedText(progressTextResource) ??
+    progressText ??
+    (stage ? translateKey(saveToLibraryStageKeys[stage]) : undefined) ??
+    (status ? translateKey(saveToLibraryStageKeys[status]) : undefined) ??
+    null
+  );
+}
+
+function translateKey(key: string | undefined): string | undefined {
+  return key ? i18n.t(key) : undefined;
+}
+
 export function getPhaseIndex(stage: string | null, status: string): number {
   if (!stage) {
     if (status === "succeeded" || status === "completed") return 3;
@@ -41,7 +84,6 @@ export function getPhaseIndex(stage: string | null, status: string): number {
   return 3;
 }
 
-/** status -> 颜色 tone */
 export function statusTone(
   status: string,
   runningTone: "brand" | "warn" = "brand",
@@ -54,13 +96,13 @@ export function statusTone(
   return runningTone;
 }
 
-/** 合并 SSE payload 到现有 execution 状态 */
 export function mergeExecutionProgress<T extends Record<string, unknown>>(
   prev: T,
   payload: {
     status?: string | null;
     stage?: string | null;
     progressText?: string | null;
+    progressTextResource?: LocalizedText | null;
     progressValue?: number | null;
     bytesSent?: number | null;
     bytesTotal?: number | null;
@@ -72,21 +114,10 @@ export function mergeExecutionProgress<T extends Record<string, unknown>>(
     status: payload.status ?? prev.status,
     stage: payload.stage ?? prev.stage,
     progressText: payload.progressText ?? prev.progressText,
+    progressTextResource: payload.progressTextResource ?? prev.progressTextResource,
     progressValue: payload.progressValue ?? prev.progressValue,
     bytesSent: payload.bytesSent ?? prev.bytesSent,
     bytesTotal: payload.bytesTotal ?? prev.bytesTotal,
     lastError: payload.lastError ?? prev.lastError,
   };
 }
-
-/** save-to-library stage -> 中文 fallback 文案 */
-export const saveToLibraryStageFallback: Record<string, string> = {
-  resolving_avatar: "读取远端模型信息",
-  preparing_library: "准备本地库",
-  downloading: "下载模型文件",
-  importing_artifact: "导入本地模型库",
-  linking_library: "写入本地关联",
-  completed: "已下载到本地库",
-  queued: "排队中",
-  failed: "下载失败",
-};
