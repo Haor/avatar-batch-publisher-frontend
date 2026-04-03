@@ -1,4 +1,4 @@
-import { startTransition, useState, useCallback, useRef, useEffect } from "react";
+import { startTransition, useState, useCallback, useRef, useEffect, useLayoutEffect } from "react";
 
 import { useTranslation } from "react-i18next";
 import { ApiProvider } from "./ApiContext";
@@ -39,7 +39,7 @@ const pageEntries: { key: PageKey; component: React.ComponentType }[] = [
 function PageSlot({ pageKey, active, children }: { pageKey: string; active: boolean; children: React.ReactNode }) {
   const [animating, setAnimating] = useState(false);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!active) return;
     setAnimating(true);
     const timer = setTimeout(() => setAnimating(false), 420);
